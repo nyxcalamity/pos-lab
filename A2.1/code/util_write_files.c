@@ -229,7 +229,7 @@ int vtk_check(char *file_in, int myrank,
 	char szFileName[80];
 	int i=0;
 	double *scalars;
-	char *file_out_name = strndup(file_in + 7, strlen(file_in)-7-8);
+	char *file_out_name = strndup(file_in + 7,strlen(file_in)-7-8);
 //	TODO : printf("%d\n", strlen(file_out_name));
 //	printf("%s\n", file_out_name);
 	if ( (scalars = (double *) malloc((nintcf + 1) * sizeof(double))) == NULL ) {

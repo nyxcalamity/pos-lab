@@ -45,7 +45,7 @@ int read_global_data_or_geometry(char* file_in,char* read_type, int myrank,
 int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
         int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
 		int *nintci, int *nintcf, int *nextci, int *nextcf,
-        int **lcc,
+        int **lcc_g,
 		int points_count_g, int**points_g, int* elems_g,
 		int *intcell_per_proc, int *extcell_per_proc, int** local_global_index_g,
 		int **metis_idx) {
@@ -54,7 +54,7 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
 	// TODO: Think of better names
     idx_t ne, nn, ncommon, nparts, objval_idx;
     idx_t *eptr, *eind, *epart_idx, *npart_idx;
-    int *npart;
+// TODO:    int *npart;
     /** End Metis variables **/
 	if( !strcmp( read_type, "oneread" ) && myrank==0 ) {
 		// Allocate
@@ -88,7 +88,7 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
 		    eptr = ( idx_t* ) calloc( sizeof( idx_t ), ( ne + 1 ) );
 		    eind = ( idx_t* ) calloc( sizeof( idx_t ), ( ne * 8 ) );
 		    *metis_idx = ( int* ) calloc( sizeof( int ), ( ne ) );
-		    npart = ( int* ) calloc( sizeof( int ), ( nn ) );
+// TODO:		    npart = ( int* ) calloc( sizeof( int ), ( nn ) );
 		    epart_idx = ( idx_t* ) calloc( sizeof( idx_t ), ( ne ) );
 		    npart_idx = ( idx_t* ) calloc( sizeof( idx_t ), ( nn ) );
 
@@ -129,8 +129,9 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
 	        for(i = 0; i < ne; i++) {
 	        	(*metis_idx)[i] = ( int )epart_idx[i];
 	        }
+	        // TODO: delete
 		    for(i=0;i<20;i++) {
-		    	printf("!!!!!!!%d\n", (*metis_idx)[i]);
+		    	printf("%d !!!!!!!%d\n",i, (*metis_idx)[i]);
 		    }
 			for(i=0; i<nprocs; i++) {
 				intcell_per_proc[i] = 0;
@@ -141,6 +142,7 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
 			extcell_per_proc[nprocs-1] = (nextcf_g - nextci_g + 1) -
 					(nprocs-1)*((nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs);  		//if our domain can't be divided in equal parts (breakets are very important!!!)
 			fill_local_global_index(nprocs,*local_global_index_g, ne, *metis_idx,intcell_per_proc);
+//			count_ext_cells(nprocs,*local_global_index_g, ne, *metis_idx,intcell_per_proc,extcell_per_proc);
 		}
 	}
 	return 0;
@@ -275,7 +277,6 @@ int send_or_read_data(char* read_type, int myrank, int nprocs,
 
 			// TODO: check on bad allocation
 			sort_data_by_local_global_index(nintci_g, nintcf_g, nextci_g, nextcf_g,
-					lcc_g,
 					&*bs_g, &*be_g, &*bn_g, &*bw_g,
 					&*bl_g, &*bh_g, &*bp_g, &*su_g,
 					&*elems_g,
@@ -284,7 +285,7 @@ int send_or_read_data(char* read_type, int myrank, int nprocs,
 			int start_idx = 0;	// Used to send data, from some index(because nodes can have not equal number of cells)
 			// Copy memory for process 0
 			for(i=nintci; i<nintcf + 1; i++) {
-				memcpy(lcc[i], lcc_g[i], 6*sizeof(int));
+				memcpy(lcc[i], lcc_g[local_global_index_g[i]], 6*sizeof(int));
 			}
 			memcpy(bs, *bs_g, intcell_per_proc[0] * sizeof(double));
 			memcpy(be, *be_g, intcell_per_proc[0] * sizeof(double));
@@ -304,7 +305,7 @@ int send_or_read_data(char* read_type, int myrank, int nprocs,
 			for (k=1; k<nprocs; ++k) {
 				start_idx += intcell_per_proc[k-1];
 				for(i=0; i < intcell_per_proc[k]; ++i) {
-					MPI_Send(lcc_g[start_idx + i],6,MPI_INT,k,
+					MPI_Send(lcc_g[local_global_index_g[start_idx + i]],6,MPI_INT,k,
 							0,MPI_COMM_WORLD);
 				}
 				MPI_Send(&(*bs_g)[start_idx],intcell_per_proc[k],
@@ -365,6 +366,9 @@ int send_or_read_data(char* read_type, int myrank, int nprocs,
 	return 0;
 }
 
+/**
+ * Compute local_global_index in sorted order
+ */
 // TODO: change name of ne
 void fill_local_global_index(int nprocs,int *local_global_index_g, int ne,  int *metis_idx, int *intcell_per_proc) {
 	int i=0;
@@ -382,7 +386,6 @@ void fill_local_global_index(int nprocs,int *local_global_index_g, int ne,  int 
 }
 
 int sort_data_by_local_global_index(int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
-		int **lcc_g,
 		double **bs_g, double **be_g, double **bn_g, double **bw_g,
 		double **bl_g, double **bh_g, double **bp_g, double **su_g,
 		int **elems_g,
@@ -457,4 +460,30 @@ int sort_data_by_local_global_index(int nintci_g, int nintcf_g, int nextci_g, in
 	free(tmp_b);
 	free(tmp_elems);
 	return 0;
+}
+
+void count_ext_cells(int nprocs, int *local_global_index_g,int ne,
+		int **lcc_g, int *metis_idx,
+		int *intcell_per_proc, int *extcell_per_proc) {
+	int i=0;
+	int j=0;
+	int proc=0;
+
+	for (proc=0; proc<nprocs;++proc) {
+		extcell_per_proc[proc] = 0;
+		for (i=0; i<ne; ++i) {
+			if (metis_idx[i]==proc) {
+				for (j=0; j<6; ++j) {
+					if(proc==0) {
+						if ( lcc_g[i][j] >= intcell_per_proc[proc]) {
+							lcc_g[i][j] =intcell_per_proc[proc] +
+									extcell_per_proc[proc];
+						} else {
+							lcc_g[i][j] = 0;
+						}
+					}
+				}
+			}
+		}
+	}
 }

@@ -68,7 +68,7 @@ int read_global_data_or_geometry(char* file_in,char* read_type, int myrank,
 int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
         int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
 		int *nintci, int *nintcf, int *nextci, int *nextcf,
-        int **lcc,
+        int **lcc_g,
 		int points_count_g, int**points_g, int* elems_g,
 		int *intcell_per_proc, int *extcell_per_proc, int** local_global_index,
 		int **metis_idx);
@@ -150,9 +150,19 @@ void fill_local_global_index(int nprocs,int *local_global_index_g, int ne,  int 
 
 // TODO: comment
 int sort_data_by_local_global_index(int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
-	int **lcc_g,
 	double **bs_g, double **be_g, double **bn_g, double **bw_g,
 	double **bl_g, double **bh_g, double **bp_g, double **su_g,
 	int **elems_g,
 	int *local_global_index_g);
+
+/**
+ * Counts the number of externall cell for each process and change lcc to have
+ * indexes which are local
+ *
+ * TODO:better comment
+ */
+void count_ext_cells(int nprocs, int *local_global_index_g, int ne,
+		int **lcc_g, int *metis_idx,
+		int *intcell_per_proc, int *extcell_per_proc);
+
 #endif /* INITIALIZATION_ALGORITHMS_H_ */

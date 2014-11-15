@@ -35,7 +35,9 @@ int read_global_data_or_geometry(char* file_in,char* read_type, int myrank,
 									   &*points, &*elems);
 		}
 	} else {
-//TODO: Implement reading of geometry by each process
+        f_status = read_binary_geo(file_in, &*nintci, &*nintcf, &*nextci, &*nextcf, &*lcc, &*bs,
+                &*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su, &*points_count,
+                &*points, &*elems);
 	}
     if ( f_status != 0 ) return f_status;
 	return 0;
@@ -49,16 +51,14 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
 		int points_count_g, int**points_g, int* elems_g,
 		int *intcell_per_proc, int *extcell_per_proc, int** local_global_index_g,
 		int **metis_idx) {
-	int start_idx = 0;
-	int proc = 0;
-	int i=0;
+	int start_idx = 0, proc = 0, i=0;
 	/** Metis variables **/
 	// TODO: Think of better names
     idx_t ne, nn, ncommon, nparts, objval_idx;
     idx_t *eptr, *eind, *epart_idx, *npart_idx;
 // TODO:    int *npart;
     /** End Metis variables **/
-	if( !strcmp( read_type, "oneread" ) && myrank==0 ) {
+	if(!strcmp(read_type, "oneread") && myrank==0) {
 		// Allocate
 		if ( (*local_global_index_g = (int *) malloc((nintcf_g + 1) * sizeof(int))) == NULL ) {
 			fprintf(stderr, "malloc(local_global_index) failed\n");
@@ -67,24 +67,22 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
 
 	    *metis_idx = ( int* ) calloc( sizeof( int ), ( nintcf_g - nintci_g + 1 ) );
 
-		if ( !strcmp( part_type, "classic" ) ) {
-
-			for(i=0; i<nprocs-1; i++) {
-				intcell_per_proc[i] = (nintcf_g + 1 + (nprocs-1))/nprocs;	// (nprocs-1) is important for not to loosing one cells in the processes
+		if (!strcmp( part_type, "classic" )) {
+			for (i=0; i<nprocs-1; i++) {
+                // (nprocs-1) is important for not to loosing one cells in the processes
+				intcell_per_proc[i] = (nintcf_g + 1 + (nprocs-1))/nprocs;
 			}
-			intcell_per_proc[nprocs-1] = nintcf_g + 1 -
-					(nprocs-1)*((nintcf_g + 1 + (nprocs-1))/nprocs);  		//if our domain can't be divided in equal parts (breakets are very important!!!)
-			for(i=0;i<(nintcf_g + 1);i++) {
-				(*local_global_index_g)[i]=i;	// In classical it's simple
+            //if our domain can't be divided in equal parts (breakets are very important!!!)
+			intcell_per_proc[nprocs-1] = nintcf_g + 1 - (nprocs-1)*((nintcf_g + 1 + (nprocs-1))/nprocs);
+			for (i=0;i<(nintcf_g + 1);i++) {
+				(*local_global_index_g)[i] = i;
 			}
-
 			for (proc=0; proc<nprocs; ++proc) {
 				for(i=0; i<intcell_per_proc[proc]; ++i) {
 					(*metis_idx)[start_idx+i] = proc;
 				}
 				start_idx += intcell_per_proc[proc];
 			}
-
 		} else {
 		    ne = nintcf_g - nintci_g + 1;
 		    nn = points_count_g;
@@ -104,32 +102,11 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
 		         eind[i] = elems_g[i];
 		    }
 		    if ( !strcmp( part_type, "classic" ) ) {
-				METIS_PartMeshDual( &ne,
-						 &nn,
-						 eptr,
-						 eind,
-						 NULL,
-						 NULL,
-						 &ncommon,
-						 &nparts,
-						 NULL,
-						 NULL,
-						 &objval_idx,
-						 epart_idx,
-						 npart_idx );
+				METIS_PartMeshDual(&ne, &nn, eptr, eind, NULL, NULL, &ncommon, &nparts, NULL, NULL, &objval_idx,
+						 epart_idx, npart_idx);
 		    } else {
-				METIS_PartMeshNodal( &ne,
-						 &nn,
-						 eptr,
-						 eind,
-						 NULL,
-						 NULL,
-						 &nparts,
-						 NULL,
-						 NULL,
-						 &objval_idx,
-						 epart_idx,
-						 npart_idx );
+				METIS_PartMeshNodal(&ne, &nn, eptr, eind, NULL, NULL, &nparts, NULL, NULL, &objval_idx,
+                        epart_idx, npart_idx);
 			}
 	        for(i = 0; i < ne; i++) {
 	        	(*metis_idx)[i] = ( int )epart_idx[i];
@@ -145,15 +122,15 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
 //			for(i=0; i<nprocs-1; i++) {
 //				extcell_per_proc[i] = (nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs;
 //			}
-			extcell_per_proc[nprocs-1] = (nextcf_g - nextci_g + 1) -
-					(nprocs-1)*((nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs);  		//if our domain can't be divided in equal parts (breakets are very important!!!)
+            //if our domain can't be divided in equal parts (breakets are very important!!!)
+			extcell_per_proc[nprocs-1] = (nextcf_g - nextci_g + 1)
+                    - (nprocs-1)*((nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs);
 			fill_local_global_index(nprocs,*local_global_index_g, ne, *metis_idx,intcell_per_proc);
-
 		}
-		count_ext_cells(nprocs,*local_global_index_g,
+		count_ext_cells(nprocs, *local_global_index_g,
 				nintci_g, nintcf_g, nextci_g, nextcf_g,
 				lcc_g, *metis_idx,
-				intcell_per_proc,extcell_per_proc);
+				intcell_per_proc, extcell_per_proc);
 	}
 	return 0;
 }
@@ -540,13 +517,8 @@ void count_ext_cells(int nprocs, int *local_global_index_g,
     		}
     	}
     	// End ghost cell
-
     	extcell_per_proc[proc] += n_ghost_cells;
     	// TODO: delete
 //printf("%d\n", extcell_per_proc[proc]);
-
-
     }
-
-    /** FINISH **/
 }

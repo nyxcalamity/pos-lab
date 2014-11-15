@@ -229,6 +229,7 @@ int vtk_check(char *file_in, int myrank,
 	char szFileName[80];
 	int i=0;
 	double *scalars;
+    //FIXME:this can definitely be done in a better way, provided wrong input it will crash, we don't want that
 	char *file_out_name = strndup(file_in + 7,strlen(file_in)-7-8);
 //	TODO : printf("%d\n", strlen(file_out_name));
 //	printf("%s\n", file_out_name);
@@ -240,6 +241,7 @@ int vtk_check(char *file_in, int myrank,
 		scalars[i] = cgup[i];
 	}
 	// Output CGUP
+    //FIXME:hardcoded out folder should be either externalized to definitions or taken in as a parameter
 	sprintf( szFileName, "%s%s.cgup.rank%i.vtk",
 			"./out/",file_out_name, myrank);
 	test_distribution(file_in, szFileName,

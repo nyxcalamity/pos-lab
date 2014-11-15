@@ -8,15 +8,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <papi.h>
+#include "metis.h"
 
 #include "initialization.h"
 #include "initialization_algorithms.h"
 #include "util_read_files.h"
 #include "util_write_files.h"
-
 #include "test_functions.h"
-
-#include "metis.h"
+#include "util_processors.h"
 
 
 int initialization(char* file_in, char* part_type, char* read_type, int nprocs, int myrank,
@@ -25,7 +25,12 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
                    double** bl, double** bh, double** bp, double** su, int* points_count,
                    int*** points, int** elems, double** var, double** cgup, double** oc,
                    double** cnorm, int** local_global_index) {
+    long_long start_usec, end_usec;
+    int input_key, part_key, read_key;
+    process_cl(file_in, part_type, read_type, &input_key, &part_key, &read_key);
+    start_usec = PAPI_get_virt_usec();
     /********** START INITIALIZATION **********/
+    //FIXME:optimize inits
 	int *metis_idx;	// Used by metis function(gives us information to which process belongs our cell)
     int i = 0;
     int j = 0;
@@ -162,6 +167,9 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
 	// end Free
 //    TODO: delete
 	printf("%d YEEEEEEEEEEEEEEEEEEEES!\n", myrank);
+    /********** END INITIALIZATION **********/
+    end_usec = PAPI_get_virt_usec();
+    write_pstats_exectime(input_key, part_key, read_key, myrank, (double)(end_usec-start_usec));
     return 0;
 }
 

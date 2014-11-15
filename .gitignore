@@ -10,6 +10,7 @@
 *.o
 *.a
 gccg
+pstats.dat
 
 #Latex
 *.aux

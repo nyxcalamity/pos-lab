@@ -129,20 +129,24 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
 	        for(i = 0; i < ne; i++) {
 	        	(*metis_idx)[i] = ( int )epart_idx[i];
 	        }
-	        // TODO: delete
-		    for(i=0;i<20;i++) {
-		    	printf("%d !!!!!!!%d\n",i, (*metis_idx)[i]);
-		    }
+//	        // TODO: delete
+//		    for(i=0;i<20;i++) {
+//		    	printf("%d !!!!!!!%d\n",i, (*metis_idx)[i]);
+//		    }
 			for(i=0; i<nprocs; i++) {
 				intcell_per_proc[i] = 0;
 			}
-			for(i=0; i<nprocs-1; i++) {
-				extcell_per_proc[i] = (nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs;
-			}
+//			// TODO: mover extcell_per_proc from here and from classic distr
+//			for(i=0; i<nprocs-1; i++) {
+//				extcell_per_proc[i] = (nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs;
+//			}
 			extcell_per_proc[nprocs-1] = (nextcf_g - nextci_g + 1) -
 					(nprocs-1)*((nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs);  		//if our domain can't be divided in equal parts (breakets are very important!!!)
 			fill_local_global_index(nprocs,*local_global_index_g, ne, *metis_idx,intcell_per_proc);
-//			count_ext_cells(nprocs,*local_global_index_g, ne, *metis_idx,intcell_per_proc,extcell_per_proc);
+			count_ext_cells(nprocs,*local_global_index_g,
+					nintci_g, nintcf_g, nextci_g, nextcf_g,
+					lcc_g, *metis_idx,
+					intcell_per_proc,extcell_per_proc);
 		}
 	}
 	return 0;
@@ -462,28 +466,81 @@ int sort_data_by_local_global_index(int nintci_g, int nintcf_g, int nextci_g, in
 	return 0;
 }
 
-void count_ext_cells(int nprocs, int *local_global_index_g,int ne,
+void count_ext_cells(int nprocs, int *local_global_index_g,
+		int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
 		int **lcc_g, int *metis_idx,
 		int *intcell_per_proc, int *extcell_per_proc) {
+	int is_int_cell = 0;
+	int n_ghost_cells=0;
+	int start_idx = 0;
+	int idx=0;
 	int i=0;
 	int j=0;
 	int proc=0;
-
-	for (proc=0; proc<nprocs;++proc) {
-		extcell_per_proc[proc] = 0;
-		for (i=0; i<ne; ++i) {
-			if (metis_idx[i]==proc) {
-				for (j=0; j<6; ++j) {
-					if(proc==0) {
-						if ( lcc_g[i][j] >= intcell_per_proc[proc]) {
-							lcc_g[i][j] =intcell_per_proc[proc] +
-									extcell_per_proc[proc];
-						} else {
-							lcc_g[i][j] = 0;
-						}
-					}
-				}
-			}
+	int g2l[nprocs][nextcf_g+1];
+	int isSaved[nextcf_g+1];
+	for(i=0; i<nextcf_g+1; ++i) {
+		for(proc=0; proc<nprocs; ++proc) {
+			g2l[proc][i]=-1;
 		}
 	}
+// TODO: delete
+//int out = 0;
+//for (i = 0; i< nintcf_g+1; ++i) {
+//	for (j=0; j<6; ++j) {
+//		if(lcc_g[i][j]>= nintcf_g && !isSaved[i]) {
+//			++out;
+//			isSaved[i]=1;
+//		}
+//	}
+//}
+//printf("computed sum of ext cells = %d\n", out);
+    /** Lets begin **/
+    for (proc=0; proc<nprocs; ++proc) {
+    	if(proc!=0) start_idx += intcell_per_proc[proc-1];
+    	// Set all isUsed to zero
+    	memset(isSaved,0,(nextcf_g+1)*sizeof(int));
+    	// Compute external cell
+    	extcell_per_proc[proc] = 0;	// TODO: is it good place for it?
+    	for (i=0;i<intcell_per_proc[proc];++i) {
+			idx = local_global_index_g[start_idx + i];
+    		for(j=0; j<6; ++j) {
+    			if(lcc_g[idx][j] >= nintcf_g+1 && !isSaved[lcc_g[idx][j]]) {
+    				isSaved[lcc_g[idx][i]] = 1;
+    				lcc_g[idx][j] = g2l[proc][idx] = intcell_per_proc[proc] +
+    						extcell_per_proc[proc];
+    				++extcell_per_proc[proc];
+    			}
+    		}
+    	}
+    	// End compute external cell
+    	memset(isSaved,0,(nextcf_g+1)*sizeof(int));
+    	// Ghost cell and local indexing
+    	n_ghost_cells=0;
+    	for (i=0;i<intcell_per_proc[proc];++i) {
+			idx = local_global_index_g[start_idx + i];
+    		for(j=0; j<6; ++j) {
+    			// Check if this cell is in this processor
+    			is_int_cell = lcc_g[idx][j] <= nintcf_g &&
+    					metis_idx[lcc_g[idx][j]] == proc;
+    			if(!is_int_cell && !isSaved[lcc_g[idx][j]]) {
+    				isSaved[lcc_g[idx][i]] = 1;
+    				lcc_g[idx][j] = g2l[proc][idx] = intcell_per_proc[proc] +
+    						extcell_per_proc[proc] + n_ghost_cells;
+    				++n_ghost_cells;
+    			} else {
+    				lcc_g[idx][j] = g2l[proc][idx] = i;
+    			}
+    		}
+    	}
+    	// End ghost cell
+
+    	extcell_per_proc[proc] += n_ghost_cells;
+    	// TODO: delete
+//printf("%d\n", n_ghost_cells);
+
+
+    }
+
+    /** FINISH **/
 }

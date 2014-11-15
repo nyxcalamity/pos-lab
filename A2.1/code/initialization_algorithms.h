@@ -159,9 +159,10 @@ int sort_data_by_local_global_index(int nintci_g, int nintcf_g, int nextci_g, in
  * Counts the number of externall cell for each process and change lcc to have
  * indexes which are local
  *
- * TODO:better comment
+ * TODO:better comment and rename the function
  */
-void count_ext_cells(int nprocs, int *local_global_index_g, int ne,
+void count_ext_cells(int nprocs, int *local_global_index_g,
+		int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
 		int **lcc_g, int *metis_idx,
 		int *intcell_per_proc, int *extcell_per_proc);
 

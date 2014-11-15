@@ -420,26 +420,26 @@ int send_or_read_data(char* read_type, int myrank, int nprocs,
 
         // Used to send data, from some index(because nodes can have not equal number of cells)
         int start_idx = 0;
-        for (k=0; k<(myrank-1); ++k) {
+        for (k=0; k<myrank; ++k) {
             start_idx += intcell_per_proc[k];
         }
         // Copy memory for process 0
         for(i=nintci; i<nintcf + 1; i++) {
             memcpy(lcc[i], lcc_g[local_global_index_g[start_idx+i]], 6*sizeof(int));
         }
-        memcpy(bs, &(*bs_g)[start_idx], intcell_per_proc[0] * sizeof(double));
-        memcpy(be, &(*be_g)[start_idx], intcell_per_proc[0] * sizeof(double));
-        memcpy(bn, &(*bn_g)[start_idx], intcell_per_proc[0] * sizeof(double));
-        memcpy(bw, &(*bw_g)[start_idx], intcell_per_proc[0] * sizeof(double));
-        memcpy(bl, &(*bl_g)[start_idx], intcell_per_proc[0] * sizeof(double));
-        memcpy(bh, &(*bh_g)[start_idx], intcell_per_proc[0] * sizeof(double));
-        memcpy(bp, &(*bp_g)[start_idx], intcell_per_proc[0] * sizeof(double));
-        memcpy(su, &(*su_g)[start_idx], intcell_per_proc[0] * sizeof(double));
+        memcpy(bs, &(*bs_g)[start_idx], intcell_per_proc[myrank] * sizeof(double));
+        memcpy(be, &(*be_g)[start_idx], intcell_per_proc[myrank] * sizeof(double));
+        memcpy(bn, &(*bn_g)[start_idx], intcell_per_proc[myrank] * sizeof(double));
+        memcpy(bw, &(*bw_g)[start_idx], intcell_per_proc[myrank] * sizeof(double));
+        memcpy(bl, &(*bl_g)[start_idx], intcell_per_proc[myrank] * sizeof(double));
+        memcpy(bh, &(*bh_g)[start_idx], intcell_per_proc[myrank] * sizeof(double));
+        memcpy(bp, &(*bp_g)[start_idx], intcell_per_proc[myrank] * sizeof(double));
+        memcpy(su, &(*su_g)[start_idx], intcell_per_proc[myrank] * sizeof(double));
         for ( i = 0; i < points_count; i++ ) {
             memcpy(points[i], points_g[i], 3*sizeof(int));
         }
-        memcpy(elems, *elems_g, intcell_per_proc[myrank]*8*sizeof(int));
-        memcpy(local_global_index, local_global_index_g, intcell_per_proc[myrank]*sizeof(int));
+        memcpy(elems, &(*elems_g)[start_idx*8], intcell_per_proc[myrank]*8*sizeof(int));
+        memcpy(local_global_index, &local_global_index_g[start_idx], intcell_per_proc[myrank]*sizeof(int));
     }
 	return 0;
 }

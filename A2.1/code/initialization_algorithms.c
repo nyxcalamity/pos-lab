@@ -49,6 +49,8 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
 		int points_count_g, int**points_g, int* elems_g,
 		int *intcell_per_proc, int *extcell_per_proc, int** local_global_index_g,
 		int **metis_idx) {
+	int start_idx = 0;
+	int proc = 0;
 	int i=0;
 	/** Metis variables **/
 	// TODO: Think of better names
@@ -63,6 +65,8 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
 			return -1;
 		}
 
+	    *metis_idx = ( int* ) calloc( sizeof( int ), ( nintcf_g - nintci_g + 1 ) );
+
 		if ( !strcmp( part_type, "classic" ) ) {
 
 			for(i=0; i<nprocs-1; i++) {
@@ -70,13 +74,15 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
 			}
 			intcell_per_proc[nprocs-1] = nintcf_g + 1 -
 					(nprocs-1)*((nintcf_g + 1 + (nprocs-1))/nprocs);  		//if our domain can't be divided in equal parts (breakets are very important!!!)
-			for(i=0; i<nprocs-1; i++) {
-				extcell_per_proc[i] = (nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs;
-			}
-			extcell_per_proc[nprocs-1] = (nextcf_g - nextci_g + 1) -
-					(nprocs-1)*((nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs);  		//if our domain can't be divided in equal parts (breakets are very important!!!)
 			for(i=0;i<(nintcf_g + 1);i++) {
 				(*local_global_index_g)[i]=i;	// In classical it's simple
+			}
+
+			for (proc=0; proc<nprocs; ++proc) {
+				for(i=0; i<intcell_per_proc[proc]; ++i) {
+					(*metis_idx)[start_idx+i] = proc;
+				}
+				start_idx += intcell_per_proc[proc];
 			}
 
 		} else {
@@ -87,7 +93,6 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
 
 		    eptr = ( idx_t* ) calloc( sizeof( idx_t ), ( ne + 1 ) );
 		    eind = ( idx_t* ) calloc( sizeof( idx_t ), ( ne * 8 ) );
-		    *metis_idx = ( int* ) calloc( sizeof( int ), ( ne ) );
 // TODO:		    npart = ( int* ) calloc( sizeof( int ), ( nn ) );
 		    epart_idx = ( idx_t* ) calloc( sizeof( idx_t ), ( ne ) );
 		    npart_idx = ( idx_t* ) calloc( sizeof( idx_t ), ( nn ) );
@@ -143,11 +148,12 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
 			extcell_per_proc[nprocs-1] = (nextcf_g - nextci_g + 1) -
 					(nprocs-1)*((nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs);  		//if our domain can't be divided in equal parts (breakets are very important!!!)
 			fill_local_global_index(nprocs,*local_global_index_g, ne, *metis_idx,intcell_per_proc);
-			count_ext_cells(nprocs,*local_global_index_g,
-					nintci_g, nintcf_g, nextci_g, nextcf_g,
-					lcc_g, *metis_idx,
-					intcell_per_proc,extcell_per_proc);
+
 		}
+		count_ext_cells(nprocs,*local_global_index_g,
+				nintci_g, nintcf_g, nextci_g, nextcf_g,
+				lcc_g, *metis_idx,
+				intcell_per_proc,extcell_per_proc);
 	}
 	return 0;
 }
@@ -537,7 +543,7 @@ void count_ext_cells(int nprocs, int *local_global_index_g,
 
     	extcell_per_proc[proc] += n_ghost_cells;
     	// TODO: delete
-//printf("%d\n", n_ghost_cells);
+//printf("%d\n", extcell_per_proc[proc]);
 
 
     }

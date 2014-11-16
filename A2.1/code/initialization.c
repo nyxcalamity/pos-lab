@@ -17,6 +17,7 @@
 #include "util_write_files.h"
 #include "test_functions.h"
 #include "util_processors.h"
+#include "posl_definitions.h"
 
 
 int initialization(char* file_in, char* part_type, char* read_type, int nprocs, int myrank,
@@ -84,15 +85,15 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     		intcell_per_proc, extcell_per_proc,
 			local_global_index_g, points_count_g);
     if ( f_status != 0 ) return f_status;
-// TODO: delete
-//printf("rank%d,nintci=%d, nintcf=%d, nextci=%d, nextcf=%d\n",myrank,*nintci, *nintcf, *nextci, *nextcf);
+    // TODO: delete
+    //printf("rank%d,nintci=%d, nintcf=%d, nextci=%d, nextcf=%d\n",myrank,*nintci, *nintcf, *nextci, *nextcf);
 	// READ NEEDED LCC or SEND FROM LCC_GLOBAL TO LCC/RECV IN LCC
     // TODO: delete
-//    if(myrank==0){
-//    	for(i=0; i<20; ++i) {
-//    		printf("---%dr-%d,%d-%d-%d-%d-%d-%d\n",myrank,i,lcc_g[i][0],lcc_g[i][1],lcc_g[i][2],lcc_g[i][3],lcc_g[i][4],lcc_g[i][5]);
-//    	}
-//    }
+    //    if(myrank==0){
+    //   	for(i=0; i<20; ++i) {
+    //    		printf("---%dr-%d,%d-%d-%d-%d-%d-%d\n",myrank,i,lcc_g[i][0],lcc_g[i][1],lcc_g[i][2],lcc_g[i][3],lcc_g[i][4],lcc_g[i][5]);
+    //    	}
+    //    }
 	f_status = send_or_read_data(read_type, myrank, nprocs,
 					*nintci, *nintcf, *nextci, *nextcf,
 					*lcc,
@@ -140,33 +141,29 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     }
 
     // VTK check
-    f_status = vtk_check(file_in, myrank,
-            *nintci, *nintcf, *su, *cgup,
-    		*points_count, *points,  *elems,
-    		*local_global_index, (*nintcf-*nintci+1));
+    f_status = vtk_check(file_in, myrank, *nintci, *nintcf, *su, *cgup, *points_count, *points,  *elems,
+            *local_global_index, (*nintcf-*nintci+1));
     if ( f_status != 0 ) return f_status;
 
     // Free
-    if( !strcmp( read_type, "oneread" ) && myrank==0 ) {
-		free(local_global_index_g);
-		for ( i = 0; i < (*nintci + 1); i++ ) {
-			free(lcc_g[i]);
-		}
-		free(lcc_g);
-
-	    free(su_g);
-	    free(bp_g);
-	    free(bh_g);
-	    free(bl_g);
-	    free(bw_g);
-	    free(bn_g);
-	    free(be_g);
-	    free(bs_g);
-	    free(elems_g);
+    //FIXME:code proper memory freeing
+    if((read_key == POSL_INIT_ONE_READ && myrank == 0) || read_key == POSL_INIT_ALL_READ) {
+        free(local_global_index_g);
+        for (i = 0; i < (*nintci + 1); i++) {
+            free(lcc_g[i]);
+        }
+        free(lcc_g);
+        free(su_g);
+        free(bp_g);
+        free(bh_g);
+        free(bl_g);
+        free(bw_g);
+        free(bn_g);
+        free(be_g);
+        free(bs_g);
+        free(elems_g);
     }
-	// end Free
-//    TODO: delete
-	printf("%d YEEEEEEEEEEEEEEEEEEEES!\n", myrank);
+	printf("[INFO] Completed initialization on task #%d\n", myrank);
     /********** END INITIALIZATION **********/
     end_usec = PAPI_get_virt_usec();
     write_pstats_exectime(input_key, part_key, read_key, myrank, (double)(end_usec-start_usec));

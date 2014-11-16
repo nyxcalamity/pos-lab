@@ -8,13 +8,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "mpi.h"
+#include "metis.h"
 
 #include "initialization_algorithms.h"
 #include "util_read_files.h"
-
-#include "mpi.h"
-
-#include "metis.h"
 
 #define NINTCF_SEND_INDEX 0
 #define NEXTCF_SEND_INDEX 1
@@ -59,102 +57,28 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
     idx_t *eptr, *eind, *epart_idx, *npart_idx;
 // TODO:    int *npart;
     /** End Metis variables **/
-	if(!strcmp(read_type, "oneread") && myrank==0) {
-		// Allocate
-		if ( (*local_global_index_g = (int *) malloc((nintcf_g + 1) * sizeof(int))) == NULL ) {
-			fprintf(stderr, "malloc(local_global_index) failed\n");
-			return -1;
-		}
-
-	    *metis_idx = ( int* ) calloc( sizeof( int ), ( nintcf_g - nintci_g + 1 ) );
-
-		if (!strcmp( part_type, "classic" )) {
-			for (i=0; i<nprocs-1; i++) {
-                // (nprocs-1) is important for not to loosing one cells in the processes
-				intcell_per_proc[i] = (nintcf_g + 1 + (nprocs-1))/nprocs;
-			}
-            //if our domain can't be divided in equal parts (breakets are very important!!!)
-			intcell_per_proc[nprocs-1] = nintcf_g + 1 - (nprocs-1)*((nintcf_g + 1 + (nprocs-1))/nprocs);
-			for (i=0;i<(nintcf_g + 1);i++) {
-				(*local_global_index_g)[i] = i;
-			}
-			for (proc=0; proc<nprocs; ++proc) {
-				for(i=0; i<intcell_per_proc[proc]; ++i) {
-					(*metis_idx)[start_idx+i] = proc;
-				}
-				start_idx += intcell_per_proc[proc];
-			}
-		} else {
-		    ne = nintcf_g - nintci_g + 1;
-		    nn = points_count_g;
-		    ncommon = 4;
-		    nparts = nprocs;
-
-		    eptr = ( idx_t* ) calloc( sizeof( idx_t ), ( ne + 1 ) );
-		    eind = ( idx_t* ) calloc( sizeof( idx_t ), ( ne * 8 ) );
-// TODO:		    npart = ( int* ) calloc( sizeof( int ), ( nn ) );
-		    epart_idx = ( idx_t* ) calloc( sizeof( idx_t ), ( ne ) );
-		    npart_idx = ( idx_t* ) calloc( sizeof( idx_t ), ( nn ) );
-
-		    for( i = 0; i < ( ne + 1 ); i++ ) {
-		        eptr[i] = 8 * i;
-		    }
-		    for( i = 0; i < ( ne * 8 ); i++ ) {
-		         eind[i] = elems_g[i];
-		    }
-		    if ( !strcmp( part_type, "classic" ) ) {
-				METIS_PartMeshDual(&ne, &nn, eptr, eind, NULL, NULL, &ncommon, &nparts, NULL, NULL, &objval_idx,
-						 epart_idx, npart_idx);
-		    } else {
-				METIS_PartMeshNodal(&ne, &nn, eptr, eind, NULL, NULL, &nparts, NULL, NULL, &objval_idx,
-                        epart_idx, npart_idx);
-			}
-	        for(i = 0; i < ne; i++) {
-	        	(*metis_idx)[i] = ( int )epart_idx[i];
-	        }
-//	        // TODO: delete
-//		    for(i=0;i<20;i++) {
-//		    	printf("%d !!!!!!!%d\n",i, (*metis_idx)[i]);
-//		    }
-			for(i=0; i<nprocs; i++) {
-				intcell_per_proc[i] = 0;
-			}
-//			// TODO: mover extcell_per_proc from here and from classic distr
-//			for(i=0; i<nprocs-1; i++) {
-//				extcell_per_proc[i] = (nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs;
-//			}
-            //if our domain can't be divided in equal parts (breakets are very important!!!)
-			extcell_per_proc[nprocs-1] = (nextcf_g - nextci_g + 1)
-                    - (nprocs-1)*((nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs);
-			fill_local_global_index(nprocs,*local_global_index_g, ne, *metis_idx, intcell_per_proc);
-		}
-		count_ext_cells(nprocs, *local_global_index_g,
-				nintci_g, nintcf_g, nextci_g, nextcf_g,
-				lcc_g, *metis_idx,
-				intcell_per_proc, extcell_per_proc);
-	} else {
-
+	if((!strcmp(read_type, "oneread") && myrank==0) || !strcmp(read_type, "allread")) {
         // Allocate
-        if ( (*local_global_index_g = (int *) malloc((nintcf_g + 1) * sizeof(int))) == NULL ) {
+        if ((*local_global_index_g = (int *) malloc((nintcf_g + 1) * sizeof(int))) == NULL) {
             fprintf(stderr, "malloc(local_global_index) failed\n");
             return -1;
         }
 
-        *metis_idx = ( int* ) calloc( sizeof( int ), ( nintcf_g - nintci_g + 1 ) );
+        *metis_idx = (int *) calloc(sizeof(int), (nintcf_g - nintci_g + 1));
 
-        if (!strcmp( part_type, "classic" )) {
-            for (i=0; i<nprocs-1; i++) {
+        if (!strcmp(part_type, "classic")) {
+            for (i = 0; i < nprocs - 1; i++) {
                 // (nprocs-1) is important for not to loosing one cells in the processes
-                intcell_per_proc[i] = (nintcf_g + 1 + (nprocs-1))/nprocs;
+                intcell_per_proc[i] = (nintcf_g + 1 + (nprocs - 1)) / nprocs;
             }
             //if our domain can't be divided in equal parts (breakets are very important!!!)
-            intcell_per_proc[nprocs-1] = nintcf_g + 1 - (nprocs-1)*((nintcf_g + 1 + (nprocs-1))/nprocs);
-            for (i=0;i<(nintcf_g + 1);i++) {
+            intcell_per_proc[nprocs - 1] = nintcf_g + 1 - (nprocs - 1) * ((nintcf_g + 1 + (nprocs - 1)) / nprocs);
+            for (i = 0; i < (nintcf_g + 1); i++) {
                 (*local_global_index_g)[i] = i;
             }
-            for (proc=0; proc<nprocs; ++proc) {
-                for(i=0; i<intcell_per_proc[proc]; ++i) {
-                    (*metis_idx)[start_idx+i] = proc;
+            for (proc = 0; proc < nprocs; ++proc) {
+                for (i = 0; i < intcell_per_proc[proc]; ++i) {
+                    (*metis_idx)[start_idx + i] = proc;
                 }
                 start_idx += intcell_per_proc[proc];
             }
@@ -164,52 +88,49 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
             ncommon = 4;
             nparts = nprocs;
 
-            eptr = ( idx_t* ) calloc( sizeof( idx_t ), ( ne + 1 ) );
-            eind = ( idx_t* ) calloc( sizeof( idx_t ), ( ne * 8 ) );
-// TODO:		    npart = ( int* ) calloc( sizeof( int ), ( nn ) );
-            epart_idx = ( idx_t* ) calloc( sizeof( idx_t ), ( ne ) );
-            npart_idx = ( idx_t* ) calloc( sizeof( idx_t ), ( nn ) );
+            eptr = (idx_t *) calloc(sizeof(idx_t), (ne + 1));
+            eind = (idx_t *) calloc(sizeof(idx_t), (ne * 8));
+            // TODO:		    npart = ( int* ) calloc( sizeof( int ), ( nn ) );
+            epart_idx = (idx_t *) calloc(sizeof(idx_t), (ne));
+            npart_idx = (idx_t *) calloc(sizeof(idx_t), (nn));
 
-            for( i = 0; i < ( ne + 1 ); i++ ) {
+            for (i = 0; i < (ne + 1); i++) {
                 eptr[i] = 8 * i;
             }
-            for( i = 0; i < ( ne * 8 ); i++ ) {
+            for (i = 0; i < (ne * 8); i++) {
                 eind[i] = elems_g[i];
             }
-            if ( !strcmp( part_type, "classic" ) ) {
+            if (!strcmp(part_type, "classic")) {
                 METIS_PartMeshDual(&ne, &nn, eptr, eind, NULL, NULL, &ncommon, &nparts, NULL, NULL, &objval_idx,
                         epart_idx, npart_idx);
             } else {
                 METIS_PartMeshNodal(&ne, &nn, eptr, eind, NULL, NULL, &nparts, NULL, NULL, &objval_idx,
                         epart_idx, npart_idx);
             }
-            for(i = 0; i < ne; i++) {
-                (*metis_idx)[i] = ( int )epart_idx[i];
+            for (i = 0; i < ne; i++) {
+                (*metis_idx)[i] = (int) epart_idx[i];
             }
-//	        // TODO: delete
-//		    for(i=0;i<20;i++) {
-//		    	printf("%d !!!!!!!%d\n",i, (*metis_idx)[i]);
-//		    }
-            for(i=0; i<nprocs; i++) {
+            //	        // TODO: delete
+            //		    for(i=0;i<20;i++) {
+            //		    	printf("%d !!!!!!!%d\n",i, (*metis_idx)[i]);
+            //		    }
+            for (i = 0; i < nprocs; i++) {
                 intcell_per_proc[i] = 0;
             }
-//			// TODO: mover extcell_per_proc from here and from classic distr
-//			for(i=0; i<nprocs-1; i++) {
-//				extcell_per_proc[i] = (nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs;
-//			}
+            //			// TODO: mover extcell_per_proc from here and from classic distr
+            //			for(i=0; i<nprocs-1; i++) {
+            //				extcell_per_proc[i] = (nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs;
+            //			}
             //if our domain can't be divided in equal parts (breakets are very important!!!)
-            extcell_per_proc[nprocs-1] = (nextcf_g - nextci_g + 1)
-                    - (nprocs-1)*((nextcf_g - nextci_g + 1 + (nprocs-1))/nprocs);
-            fill_local_global_index(nprocs,*local_global_index_g, ne, *metis_idx,intcell_per_proc);
+            extcell_per_proc[nprocs - 1] = (nextcf_g - nextci_g + 1)
+                    - (nprocs - 1) * ((nextcf_g - nextci_g + 1 + (nprocs - 1)) / nprocs);
+            fill_local_global_index(nprocs, *local_global_index_g, ne, *metis_idx, intcell_per_proc);
         }
         count_ext_cells(nprocs, *local_global_index_g,
                 nintci_g, nintcf_g, nextci_g, nextcf_g,
                 lcc_g, *metis_idx,
                 intcell_per_proc, extcell_per_proc);
-
-
-
-    }
+	}
 	return 0;
 }
 
@@ -396,6 +317,7 @@ int send_or_read_data(char* read_type, int myrank, int nprocs,
 			for(i=nintci; i < nintcf; ++i) {
 				MPI_Recv(lcc[i], 6, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
 			}
+            //TOREVIEW:isn't this always a negative number: (*nintcf-*nintci+1)?
 			MPI_Recv(bs, (nintcf-nintci+1), MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &status);
 			MPI_Recv(be, (nintcf-nintci+1), MPI_DOUBLE, 0, 2, MPI_COMM_WORLD, &status);
 			MPI_Recv(bn, (nintcf-nintci+1), MPI_DOUBLE, 0, 3, MPI_COMM_WORLD, &status);

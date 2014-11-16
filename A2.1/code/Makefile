@@ -30,5 +30,8 @@ gccg: gccg.c test_functions.c $(LIBPOS)
 $(LIBPOS) : $(OBJS)
 	$(AR) $(ARFLAGS) $@ $+
 
-clean:
-	rm -rf *.o gccg $(LIBPOS) out/* pstats.dat
+clean: clean-data
+	rm -rf *.o gccg $(LIBPOS)
+
+clean-data:
+	rm -rf out/* pstats.dat

@@ -167,6 +167,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     /********** END INITIALIZATION **********/
     end_usec = PAPI_get_virt_usec();
     write_pstats_exectime(input_key, part_key, read_key, myrank, (double)(end_usec-start_usec));
+    write_pstats_partition(input_key, part_key, myrank, intcell_per_proc[myrank], extcell_per_proc[myrank]);
     return 0;
 }
 

@@ -35,6 +35,7 @@ int read_global_data_or_geometry(char* file_in,char* read_type, int myrank, int 
 }
 
 
+//FIXME:rename this function
 int compute_metis(char* part_type, char* read_type, int myrank, int nprocs, int nintci_g, 
         int nintcf_g, int nextci_g, int nextcf_g, int *nintci, int *nintcf, int *nextci, int *nextcf, 
         int **lcc_g, int points_count_g, int**points_g, int* elems_g, int *intcell_per_proc, 
@@ -118,7 +119,7 @@ int allocate_local_variables(char* read_type, int myrank, int nprocs, int *nintc
         int *local_global_index_g, int points_count_g) {
     int i=0;
     MPI_Status status;
-    //FIXME: replace strcmp with definitions
+    //TODO: replace strcmp with definitions
     if (!strcmp(read_type, "oneread")) {
         // Before we allocate, we need to know how much memory to allocate same for all processes
         *nintci=0;
@@ -222,7 +223,7 @@ int send_or_read_data(char* read_type, int myrank, int nprocs, int nintci, int n
         int points_count_g, int** points_g, int **elems_g, int *local_global_index_g) {
     int k=0, i=0;
     MPI_Status status;
-    //FIXME: replace strcmp with definitions
+    //TODO: replace strcmp with definitions
     if (!strcmp(read_type, "oneread")) {
         if (myrank == 0) {
             //TODO:check allocation status

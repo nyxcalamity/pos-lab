@@ -20,20 +20,34 @@
 perf_off
 
 ##execution
-echo "[INFO] Executing oneread strategies for 4 tasks"
+echo "============================================================================================="
+echo "Testing performance"
+echo "============================================================================================="
+echo "[INFO] Executing read strategies for 4 tasks and DRALL data"
 mpiexec -n 4 ./gccg ./data/drall.geo.bin classic oneread
 mpiexec -n 4 ./gccg ./data/drall.geo.bin nodal oneread
 mpiexec -n 4 ./gccg ./data/drall.geo.bin dual oneread
-echo "[INFO] Executing allread strategies for 4 tasks"
 mpiexec -n 4 ./gccg ./data/drall.geo.bin classic allread
 mpiexec -n 4 ./gccg ./data/drall.geo.bin nodal allread
 mpiexec -n 4 ./gccg ./data/drall.geo.bin dual allread
 echo "---------------------------------------------------"
-echo "[INFO] Executing oneread strategies for 12 tasks"
+echo "[INFO] Executing read strategies for 12 tasks and COJACK data"
 mpiexec -n 12 ./gccg ./data/cojack.geo.bin classic oneread
 mpiexec -n 12 ./gccg ./data/cojack.geo.bin nodal oneread
 mpiexec -n 12 ./gccg ./data/cojack.geo.bin dual oneread
-echo "[INFO] Executing allread strategies for 12 tasks"
 mpiexec -n 12 ./gccg ./data/cojack.geo.bin classic allread
 mpiexec -n 12 ./gccg ./data/cojack.geo.bin nodal allread
 mpiexec -n 12 ./gccg ./data/cojack.geo.bin dual allread
+#echo "============================================================================================="
+#echo "Testing partitioning"
+#echo "============================================================================================="
+#echo "[INFO] Executing strategies for 9 tasks and PENT data"
+#mpiexec -n 9 ./gccg ./data/pent.geo.bin and classic allread
+#mpiexec -n 9 ./gccg ./data/pent.geo.bin and nodal allread
+#mpiexec -n 9 ./gccg ./data/pent.geo.bin and dual allread
+#echo "---------------------------------------------------"
+#echo "[INFO] Executing strategies for 9 tasks and PENT data"
+#mpiexec -n 9 ./gccg ./data/cojack.geo.bin classic allread
+#mpiexec -n 9 ./gccg ./data/cojack.geo.bin nodal allread
+#mpiexec -n 9 ./gccg ./data/cojack.geo.bin dual allread
+#echo "============================================================================================="

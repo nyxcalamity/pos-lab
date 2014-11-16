@@ -13,4 +13,9 @@
 #define POSL_INIT_ONE_READ 1
 #define POSL_INIT_ALL_READ 2
 
+//TODO:check why we need these
+#define NINTCF_SEND_INDEX 0
+#define NEXTCF_SEND_INDEX 1
+#define POINTSCOUNT_SEND_INDEX 2
+
 #endif

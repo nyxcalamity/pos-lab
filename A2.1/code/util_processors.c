@@ -6,7 +6,7 @@
 #include <string.h>
 
 
-//FIXME:use this function instead of any other command line arguments processor (like in gccg.c)
+//TODO:use this function instead of any other command line arguments processor (like in gccg.c)
 void process_cl(char* file_in, char* part_type, char* read_type, int *input_key, int *part_key, int *read_key) {
     if (strstr(file_in, "tjunc") != NULL) {
         *input_key = POSL_DATA_TJUNC;

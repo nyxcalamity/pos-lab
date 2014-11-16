@@ -435,7 +435,7 @@ void count_ext_cells(int nprocs, int *local_global_index_g, int nintci_g, int ni
             for (j=0; j<6; ++j) {
                 if (lcc_g[idx][j] >= nintcf_g+1 && !isSaved[lcc_g[idx][j]]) {
                     isSaved[lcc_g[idx][j]] = 1;
-                    lcc_g[idx][j] = g2l[proc][idx] = intcell_per_proc[proc]+extcell_per_proc[proc];
+                    g2l[proc][idx] = intcell_per_proc[proc]+extcell_per_proc[proc];
                     ++extcell_per_proc[proc];
                 }
             }
@@ -451,11 +451,11 @@ void count_ext_cells(int nprocs, int *local_global_index_g, int nintci_g, int ni
                 is_int_cell = lcc_g[idx][j] <= nintcf_g && metis_idx[lcc_g[idx][j]] == proc;
                 if (!is_int_cell && !isSaved[lcc_g[idx][j]]) {
                     isSaved[lcc_g[idx][j]] = 1;
-                    lcc_g[idx][j] = g2l[proc][idx] = intcell_per_proc[proc]+extcell_per_proc[proc]
+                    g2l[proc][idx] = intcell_per_proc[proc]+extcell_per_proc[proc]
                             +n_ghost_cells;
                     ++n_ghost_cells;
                 } else {
-                    lcc_g[idx][j] = g2l[proc][idx] = i;
+                    g2l[proc][local_global_index_g[idx]] = i;
                 }
             }
     	}

@@ -460,6 +460,6 @@ void count_ext_cells(int nprocs, int *local_global_index_g, int nintci_g, int ni
             }
     	}
     	// End ghost cell
-    	extcell_per_proc[proc] += n_ghost_cells;
+//    	extcell_per_proc[proc] += n_ghost_cells;
     }
 }

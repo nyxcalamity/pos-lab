@@ -32,7 +32,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     /********** START INITIALIZATION **********/
     //FIXME:optimize inits and var names
     // Used by metis function(gives us information to which process belongs our cell)
-    int *metis_idx, i=0, j=0;
+    int *metis_idx, i=0;
     /** Simulation global variables which are read by first process to pass needed data
      * to other processes or which is needed by METIS */
     int nintci_g, nintcf_g;    /// internal cells start and end index
@@ -119,8 +119,8 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     }
 
     // VTK check
-    f_status = vtk_check(file_in, myrank, *nintci, *nintcf, *su, *cgup, *points_count, *points, 
-            *elems, *local_global_index, (*nintcf-*nintci+1));
+//    f_status = vtk_check(file_in, myrank, *nintci, *nintcf, *su, *cgup, *points_count, *points, 
+//            *elems, *local_global_index, (*nintcf-*nintci+1));
     //TODO:externalize error checking
     if (f_status != 0){
         return f_status;

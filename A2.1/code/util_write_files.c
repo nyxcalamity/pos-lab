@@ -6,8 +6,9 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include "util_write_files.h"
+#include <string.h>
 
+#include "util_write_files.h"
 #include "test_functions.h"
 
 int store_simulation_stats(char *in_file_name, char *out_file_name, int nintci, int nintcf,
@@ -232,9 +233,9 @@ int vtk_check(char *file_in, int myrank, int nintci, int nintcf, double *su, dou
     const char *kOutputDirectoryName = "./out/";
     
     //find base file name
-    char *file_out_name = strrchr(file_in,'/')+1;
+    char *data_file = strrchr(file_in,'/')+1;
     //strip data file base name
-    file_out_name = strndup(file_out_name, strchr(file_out_name, '.')-file_out_name);
+    data_file = strndup(data_file, strchr(data_file, '.')-data_file);
     
     if ((scalars = (double *) malloc((nintcf+1)*sizeof(double))) == NULL) {
         fprintf(stderr, "malloc(local_global_index) failed\n");
@@ -244,21 +245,21 @@ int vtk_check(char *file_in, int myrank, int nintci, int nintcf, double *su, dou
         scalars[i] = cgup[i];
     }
     // Output CGUP
-    sprintf(szFileName, "%s%s.cgup.rank%i.vtk", kOutputDirectoryName, file_out_name, myrank);
+    sprintf(szFileName, "%s%s.cgup.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
     test_distribution(file_in, szFileName, local_global_index, local_num_elems, scalars);
-    sprintf(szFileName, "%s%s.cgup.cutted.rank%i.vtk", kOutputDirectoryName,file_out_name, myrank);
+    sprintf(szFileName, "%s%s.cgup.cutted.rank%i.vtk", kOutputDirectoryName,data_file, myrank);
     vtk_for_process(file_in, szFileName, 0, local_num_elems-1, points_count, points, elems, 
             local_global_index, local_num_elems, scalars);
     // Output SU
     for (i=0; i<local_num_elems; i++){
         scalars[i] = su[i];
     }
-    sprintf(szFileName, "%s%s.su.rank%i.vtk", kOutputDirectoryName, file_out_name, myrank);
+    sprintf(szFileName, "%s%s.su.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
     test_distribution(file_in, szFileName, local_global_index, local_num_elems, scalars);
-    sprintf(szFileName, "%s%s.su.cutted.rank%i.vtk", kOutputDirectoryName, file_out_name, myrank);
+    sprintf(szFileName, "%s%s.su.cutted.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
     vtk_for_process(file_in, szFileName, 0, local_num_elems-1, points_count, points, elems, 
             local_global_index, local_num_elems, scalars);
-    free(file_out_name);
+    free(data_file);
     return 0;
 }
 // end_of_student_code-----------------------------------------------------------------------------------

@@ -28,7 +28,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     long_long start_usec, end_usec;
     int input_key, part_key, read_key;
     process_cl(file_in, part_type, read_type, &input_key, &part_key, &read_key);
-    start_usec = PAPI_get_virt_usec();
+//    start_usec = PAPI_get_virt_usec();
     /********** START INITIALIZATION **********/
     //FIXME:optimize inits and var names
     // Used by metis function(gives us information to which process belongs our cell)
@@ -72,6 +72,21 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     if (f_status != 0){
         return f_status;
     }
+    if(OUTPUT_LCC_G) {
+        if(myrank==0) {
+            for(i=0;i<nintcf_g+1;++i) {
+                printf("i%-6d,p%d, %-10d %-10d  %-10d %-10d %-10d %-10d\n",
+                        i,metis_idx[i],lcc_g[i][0],lcc_g[i][1],lcc_g[i][2],lcc_g[i][3],lcc_g[i][4],lcc_g[i][5]);
+//                printf("i%-6d, %d\n", i, local_global_index_g[i]);
+            }
+        }
+    }
+    if (OUTPUT_NINTCF_NINTCE) {
+        printf("rank%d,intcell_per_proc[end]=%d, extcell_per_proc[end]=%d\n",
+                myrank,intcell_per_proc[nprocs-1],extcell_per_proc[nprocs-1]);
+        printf("rank%d,intcell_per_proc[0]=%d, extcell_per_proc[0]=%d\n",
+                myrank,intcell_per_proc[0],extcell_per_proc[0]);
+    }
     // ALLOCATE lcc, bs, be, bn, bw, bl, bh, bp, su, points, local_global_index
     f_status = allocate_local_variables(read_type, myrank, nprocs, nintci, nintcf, nextci, nextcf,
             &*lcc, &*bs,&*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su, &*points_count, &*points, &*elems, 
@@ -85,6 +100,17 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
             *local_global_index, intcell_per_proc, extcell_per_proc, nintci_g, nintcf_g, nextci_g, 
             nextcf_g, lcc_g, &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g, points_count_g, 
             points_g, &elems_g, local_global_index_g);
+
+    if (OUTPUT_LCC) {
+        if (myrank==0) {
+            for(i=0;i<(*nintcf)+1;++i) {
+                printf("i%-6d, %-10d %-10d  %-10d %-10d %-10d %-10d\n",
+                        i,(*lcc)[i][0],(*lcc)[i][1],(*lcc)[i][2],(*lcc)[i][3],(*lcc)[i][4],(*lcc)[i][5]);
+                printf("i%-6d, %d\n", i, local_global_index_g[i]);
+            }
+        }
+    }
+
     //TODO:externalize error checking
     if (f_status != 0){
         return f_status;
@@ -119,8 +145,8 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     }
 
     // VTK check
-//    f_status = vtk_check(file_in, myrank, *nintci, *nintcf, *su, *cgup, *points_count, *points, 
-//            *elems, *local_global_index, (*nintcf-*nintci+1));
+    f_status = vtk_check(file_in, myrank, *nintci, *nintcf, *su, *cgup, *points_count, *points,
+            *elems, *local_global_index, (*nintcf-*nintci+1));
     //TODO:externalize error checking
     if (f_status != 0){
         return f_status;
@@ -146,8 +172,8 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     }
     printf("[INFO] Completed initialization on task #%d\n", myrank);
     /********** END INITIALIZATION **********/
-    end_usec = PAPI_get_virt_usec();
-    write_pstats_exectime(input_key, part_key, read_key, myrank, (double)(end_usec-start_usec));
-    write_pstats_partition(input_key, part_key, myrank, intcell_per_proc[myrank], extcell_per_proc[myrank]);
+//    end_usec = PAPI_get_virt_usec();
+//    write_pstats_exectime(input_key, part_key, read_key, myrank, (double)(end_usec-start_usec));
+//    write_pstats_partition(input_key, part_key, myrank, intcell_per_proc[myrank], extcell_per_proc[myrank]);
     return 0;
 }

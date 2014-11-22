@@ -65,13 +65,10 @@ int read_global_data_or_geometry(char* file_in,char* read_type, int myrank,
  * @param local_global_index
  * @return
  */
-int compute_metis(char* part_type, char* read_type, int myrank, int nprocs,
-        int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
-		int *nintci, int *nintcf, int *nextci, int *nextcf,
-        int **lcc_g,
-		int points_count_g, int**points_g, int* elems_g,
-		int *intcell_per_proc, int *extcell_per_proc, int** local_global_index,
-		int **metis_idx);
+int compute_metis(char* part_type, char* read_type, int myrank, int nprocs, int nintci_g,
+        int nintcf_g, int nextci_g, int nextcf_g, int *nintci, int *nintcf, int *nextci, int *nextcf,
+        int **lcc_g, int points_count_g, int**points_g, int* elems_g, int *intcell_per_proc,
+        int *extcell_per_proc, int** local_global_index_g, int** local_global_index, int **metis_idx);
 
 /**
  * Send and receive or compute nintci,nintcf,nextci,nextcf and allocate needed
@@ -145,8 +142,8 @@ int send_or_read_data(char* read_type, int myrank, int nprocs,
 		int points_count_g, int** points_g, int **elems_g,
 		int *local_global_index_g);
 
-// TODO: write comment + rename ne here and in *.c
-void fill_local_global_index(int nprocs,int *local_global_index_g, int ne,  int *metis_idx, int *intcell_per_proc);
+void fill_local_global_index(char* read_type, int myrank, int nintci, int nintcf,
+        int** local_global_index, int *metis_idx, int nelems_g);
 
 // TODO: comment
 int sort_data_by_local_global_index(int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
@@ -161,7 +158,8 @@ int sort_data_by_local_global_index(int nintci_g, int nintcf_g, int nextci_g, in
  *
  * TODO:better comment and rename the function
  */
-void count_ext_cells(int nprocs, int *local_global_index_g,
+void count_ext_cells(char* read_type, int myrank, int nprocs,
+                int *local_global_index_g,
 		int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
 		int **lcc_g, int *metis_idx,
 		int *intcell_per_proc, int *extcell_per_proc);

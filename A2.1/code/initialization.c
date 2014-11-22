@@ -102,11 +102,11 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
             points_g, &elems_g, local_global_index_g);
 
     if (OUTPUT_LCC) {
-        if (myrank==0) {
+        if (myrank==1) {
             for(i=0;i<(*nintcf)+1;++i) {
-                printf("i%-6d, %-10d %-10d  %-10d %-10d %-10d %-10d\n",
-                        i,(*lcc)[i][0],(*lcc)[i][1],(*lcc)[i][2],(*lcc)[i][3],(*lcc)[i][4],(*lcc)[i][5]);
-                printf("i%-6d, %d\n", i, local_global_index_g[i]);
+//                printf("i%-6d, %-10d %-10d  %-10d %-10d %-10d %-10d\n",
+//                        i,(*lcc)[i][0],(*lcc)[i][1],(*lcc)[i][2],(*lcc)[i][3],(*lcc)[i][4],(*lcc)[i][5]);
+                printf("i%-6d, %d\n", i, (*local_global_index)[i]);
             }
         }
     }

@@ -39,34 +39,26 @@ int read_global_data_or_geometry(char* file_in,char* read_type, int myrank, int 
 int compute_metis(char* part_type, char* read_type, int myrank, int nprocs, int nintci_g, 
         int nintcf_g, int nextci_g, int nextcf_g, int *nintci, int *nintcf, int *nextci, int *nextcf, 
         int **lcc_g, int points_count_g, int**points_g, int* elems_g, int *intcell_per_proc, 
-        int *extcell_per_proc, int** local_global_index_g, int **metis_idx) {
-    int start_idx=0, proc=0, i=0;
+        int *extcell_per_proc, int** local_global_index_g, int** local_global_index, int **metis_idx) {
+    int i=0;
     idx_t nelems, nnodes, ncommon, nparts, objval;
     idx_t *elem_ptr, *elem_idx, *elem_part, *node_part;
     nelems = nintcf_g-nintci_g+1;
+    *metis_idx = (int *) calloc(sizeof(int), (nintcf_g-nintci_g+1));
     //TODO: replace strcmp with definitions
-    if ((!strcmp(read_type, "oneread") && (myrank == 0)) || !strcmp(read_type, "allread")) {
-        if ((*local_global_index_g = (int *) malloc((nintcf_g + 1) * sizeof(int))) == NULL) {
-            fprintf(stderr, "malloc(local_global_index) failed\n");
-            return -1;
-        }
-        *metis_idx = (int *) calloc(sizeof(int), (nintcf_g-nintci_g+1));
-        //TODO: replace strcmp with definitions
+    if ((!strcmp(read_type, "oneread") && (myrank == 0))) {
+
+    } else if (!strcmp(read_type, "allread")) {
+        *nintci = 0;
+        *nintcf = 0;
         if (!strcmp(part_type, "classic")) {
-            for (i=0; i<nprocs-1; i++) {
-                //adjusted devision to account for leftover cells
-                intcell_per_proc[i] = (nintcf_g+1+(nprocs-1))/nprocs;
+            if(myrank == nprocs-1) {
+                *nintcf = nelems-(nprocs-1)*((nelems+(nprocs-1))/nprocs) - 1;
+            } else {
+                *nintcf = (nelems+(nprocs-1))/nprocs - 1;
             }
-            //if our domain can't be divided in equal parts
-            intcell_per_proc[nprocs-1] = nintcf_g+1-(nprocs-1)*((nintcf_g+1+(nprocs-1))/nprocs);
-            for (i=0; i<(nintcf_g+1); i++) {
-                (*local_global_index_g)[i] = i;
-            }
-            for (proc=0; proc<nprocs; ++proc) {
-                for (i=0; i<intcell_per_proc[proc]; ++i) {
-                    (*metis_idx)[start_idx+i] = proc;
-                }
-                start_idx += intcell_per_proc[proc];
+            for (i=0; i<nelems; ++i) {
+                (*metis_idx)[i] = i / ((nelems+(nprocs-1))/nprocs);
             }
         } else {
             nnodes = points_count_g;
@@ -85,8 +77,8 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs, int 
                 elem_idx[i] = elems_g[i];
             }
             //TODO: replace strcmp with definitions
-            if (!strcmp(part_type, "classic")) {
-                METIS_PartMeshDual(&nelems, &nnodes, elem_ptr, elem_idx, NULL, NULL, &ncommon, &nparts, NULL, NULL, 
+            if (!strcmp(part_type, "dual")) {
+                METIS_PartMeshDual(&nelems, &nnodes, elem_ptr, elem_idx, NULL, NULL, &ncommon, &nparts, NULL, NULL,
                         &objval, elem_part, node_part);
             } else {
                 METIS_PartMeshNodal(&nelems, &nnodes, elem_ptr, elem_idx, NULL, NULL, &nparts, NULL, NULL, &objval,
@@ -95,12 +87,15 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs, int 
             for (i=0; i<nelems; i++) {
                 (*metis_idx)[i] = (int) elem_part[i];
             }
-            //FIXME:move outside of this function
-            fill_local_global_index(nprocs, *local_global_index_g, nelems, *metis_idx, intcell_per_proc);
+            // Calculate nintcf
+            for (i=0; i<nelems; i++) {
+                if (myrank == (*metis_idx)[i]) {
+                    (*nintcf) += 1;
+                }
+            }
+            // At the end we need to subtract one because nintcf is the last index not the amount of elements
+            --(*nintcf);
         }
-        //FIXME:move outside of this function
-        count_ext_cells(nprocs, *local_global_index_g, nintci_g, nintcf_g, nextci_g, nextcf_g,
-                lcc_g, *metis_idx, intcell_per_proc, extcell_per_proc);
     }
     return 0;
 }
@@ -317,19 +312,18 @@ int send_or_read_data(char* read_type, int myrank, int nprocs, int nintci, int n
 /**
  * Compute local_global_index in sorted order
  */
-//FIXME: change name of this function
-void fill_local_global_index(int nprocs,int *local_global_index_g, int ne,  int *metis_idx, 
-        int *intcell_per_proc) {
-    int i=0, k=0, writer_counter=0;
-    //TODO:split this for loop into 2 simpler ones
-    for(k=0; k<nprocs; ++k) {
-        intcell_per_proc[k] = 0;
-        for(i=0; i<ne; ++i) {
-            if(metis_idx[i]==k) {
-                ++intcell_per_proc[k];
-                local_global_index_g[writer_counter]=i;
-                ++writer_counter;
-            }
+//FIXME: change name of this function + check on bad allocation
+void fill_local_global_index(char* read_type, int myrank, int nintci, int nintcf,
+        int** local_global_index, int *metis_idx, int nelems_g) {
+    int i = 0, local_idx=0;
+    if ((*local_global_index = (int *) malloc(((nintcf)+1)*sizeof(int))) == NULL) {
+        fprintf(stderr, "malloc(local_global_index) failed\n");
+//        return -1;
+    }
+    for (i=0; i<nelems_g; ++i) {
+        if (metis_idx[i]==myrank) {
+            (*local_global_index)[local_idx]=i;
+            ++local_idx;
         }
     }
 }
@@ -411,56 +405,61 @@ int sort_data_by_local_global_index(int nintci_g, int nintcf_g, int nextci_g, in
 }
 
 
-void count_ext_cells(int nprocs, int *local_global_index_g, int nintci_g, int nintcf_g, int nextci_g, 
-        int nextcf_g, int **lcc_g, int *metis_idx, int *intcell_per_proc, int *extcell_per_proc) {
-    int is_int_cell=0, n_ghost_cells=0, start_idx=0, idx=0, i=0, j=0, proc=0;
-    int g2l[nprocs][nextcf_g+1], isSaved[nextcf_g+1];
-    
-    for (i=0; i<nextcf_g+1; ++i) {
-        for (proc=0; proc<nprocs; ++proc) {
-            g2l[proc][i]=-1;
-        }
-    }
+void count_ext_cells(char* read_type, int myrank, int nprocs,
+        int *local_global_index_g,
+        int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
+        int **lcc_g, int *metis_idx,
+        int *intcell_per_proc, int *extcell_per_proc) {
+    if ((!strcmp(read_type, "oneread") && (myrank == 0)) || !strcmp(read_type, "allread")) {
+        int is_int_cell=0, n_ghost_cells=0, start_idx=0, idx=0, i=0, j=0, proc=0;
+        int g2l[nprocs][nextcf_g+1], isSaved[nextcf_g+1];
 
-    for (proc=0; proc<nprocs; ++proc) {
-    	if (proc != 0) {
-            start_idx += intcell_per_proc[proc-1];
+        for (i=0; i<nextcf_g+1; ++i) {
+            for (proc=0; proc<nprocs; ++proc) {
+                g2l[proc][i]=-1;
+            }
         }
-    	// Set all isSaved to zero
-    	memset(isSaved, 0, (nextcf_g+1)*sizeof(int));
-    	// Compute external cell
-    	extcell_per_proc[proc] = 0;	// TODO: is it good place for it?
-    	for (i=0; i<intcell_per_proc[proc]; ++i) {
-            idx = local_global_index_g[start_idx+i];
-            for (j=0; j<6; ++j) {
-                if (lcc_g[idx][j] >= nintcf_g+1 && !isSaved[lcc_g[idx][j]]) {
-                    isSaved[lcc_g[idx][j]] = 1;
-                    g2l[proc][idx] = intcell_per_proc[proc]+extcell_per_proc[proc];
-                    ++extcell_per_proc[proc];
+    
+        for (proc=0; proc<nprocs; ++proc) {
+            if (proc != 0) {
+                start_idx += intcell_per_proc[proc-1];
+            }
+            // Set all isSaved to zero
+            memset(isSaved, 0, (nextcf_g+1)*sizeof(int));
+            // Compute external cell
+            extcell_per_proc[proc] = 0;	// TODO: is it good place for it?
+            for (i=0; i<intcell_per_proc[proc]; ++i) {
+                idx = local_global_index_g[start_idx+i];
+                for (j=0; j<6; ++j) {
+                    if (lcc_g[idx][j] >= nintcf_g+1 && !isSaved[lcc_g[idx][j]]) {
+                        isSaved[lcc_g[idx][j]] = 1;
+                        g2l[proc][idx] = intcell_per_proc[proc]+extcell_per_proc[proc];
+                        ++extcell_per_proc[proc];
+                    }
                 }
             }
-    	}
-    	// End compute external cell
-    	memset(isSaved, 0, (nextcf_g+1)*sizeof(int));
-    	// Ghost cell and local indexing
-    	n_ghost_cells = 0;
-    	for (i=0; i<intcell_per_proc[proc]; ++i) {
-            idx = local_global_index_g[start_idx + i];
-            for (j=0; j<6; ++j) {
-                // Check if this cell is in this processor
-                is_int_cell = lcc_g[idx][j] <= nintcf_g && metis_idx[lcc_g[idx][j]] == proc;
-                if (!is_int_cell && !isSaved[lcc_g[idx][j]]) {
-                    isSaved[lcc_g[idx][j]] = 1;
-                    g2l[proc][idx] = intcell_per_proc[proc]+extcell_per_proc[proc]
-                            +n_ghost_cells;
-                    ++n_ghost_cells;
-                } else {
-                    g2l[proc][local_global_index_g[idx]] = i;
+            // End compute external cell
+            memset(isSaved, 0, (nextcf_g+1)*sizeof(int));
+            // Ghost cell and local indexing
+            n_ghost_cells = 0;
+            for (i=0; i<intcell_per_proc[proc]; ++i) {
+                idx = local_global_index_g[start_idx + i];
+                for (j=0; j<6; ++j) {
+                    // Check if this cell is in this processor
+                    is_int_cell = lcc_g[idx][j] <= nintcf_g && metis_idx[lcc_g[idx][j]] == proc;
+                    if (!is_int_cell && !isSaved[lcc_g[idx][j]]) {
+                        isSaved[lcc_g[idx][j]] = 1;
+                        g2l[proc][idx] = intcell_per_proc[proc]+extcell_per_proc[proc]
+                                +n_ghost_cells;
+                        ++n_ghost_cells;
+                    } else {
+                        g2l[proc][local_global_index_g[idx]] = i;
+                    }
                 }
             }
-    	}
-    	// End ghost cell
-        //TODO:check if we need sum for future milestones
-//    	extcell_per_proc[proc] += n_ghost_cells;
+            // End ghost cell
+            //TODO:check if we need sum for future milestones
+        	extcell_per_proc[proc] += n_ghost_cells;
+        }
     }
 }

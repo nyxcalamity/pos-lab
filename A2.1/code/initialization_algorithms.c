@@ -85,7 +85,7 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs, int 
                 elem_idx[i] = elems_g[i];
             }
             //TODO: replace strcmp with definitions
-            if (!strcmp(part_type, "classic")) {
+            if (!strcmp(part_type, "dual")) {
                 METIS_PartMeshDual(&nelems, &nnodes, elem_ptr, elem_idx, NULL, NULL, &ncommon, &nparts, NULL, NULL, 
                         &objval, elem_part, node_part);
             } else {

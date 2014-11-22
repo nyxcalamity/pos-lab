@@ -90,15 +90,9 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs, int 
  * @param local_global_index
  * @return
  */
-int allocate_local_variables(char* read_type, int myrank, int nprocs,
-		int *nintci, int *nintcf, int *nextci,int *nextcf,
-		int ***lcc,
-		double **bs, double **be, double **bn, double **bw,
-		double **bl, double **bh, double **bp, double **su,
-		int* points_count, int*** points, int** elems,
-		int **local_global_index,
-		int *intcell_per_proc, int *extcell_per_proc,
-		int *local_global_index_g, int points_count_g);
+int allocate_lcc_elems_points(char* read_type, int myrank, int nprocs, int *nintci, int *nintcf,
+       int ***lcc, int* points_count, int*** points,
+        int** elems, int **local_global_index, int points_count_g);
 
 /**
  * Send and receive or read all needed local data
@@ -127,20 +121,19 @@ int allocate_local_variables(char* read_type, int myrank, int nprocs,
  * @param local_global_index
  * @return
  */
-int send_or_read_data(char* read_type, int myrank, int nprocs,
-		int nintci, int nintcf, int nextci,int nextcf,
-		int **lcc,
-		double *bs, double *be, double *bn, double *bw,
-		double *bl, double *bh, double *bp, double *su,
-		int points_count, int** points, int* elems,
-		int *local_global_index,
-		int *intcell_per_proc, int *extcell_per_proc,
-		int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
-		int **lcc_g,
-		double **bs_g, double **be_g, double **bn_g, double **bw_g,
-		double **bl_g, double **bh_g, double **bp_g, double **su_g,
-		int points_count_g, int** points_g, int **elems_g,
-		int *local_global_index_g);
+int fill_lcc_elems_points(char* read_type, int myrank, int nprocs, int nintci, int nintcf,
+        int **lcc, int points_count, int** points, int* elems,
+        int *local_global_index,  int **lcc_g,
+        int points_count_g, int** points_g, int **elems_g);
+
+int allocate_boundary_coef(char* read_type, int myrank, int nprocs, int *nextcf, double **bs, double **be, double **bn, double **bw,
+        double **bl, double **bh, double **bp, double **su);
+
+int fill_boundary_coef(char* read_type, int myrank, int nprocs, int nintci, int nintcf, int nextci,
+        int nextcf, double *bs, double *be, double *bn, double *bw, double *bl,
+        double *bh, double *bp, double *su,
+        int *local_global_index, double **bs_g, double **be_g,
+        double **bn_g, double **bw_g, double **bl_g, double **bh_g, double **bp_g, double **su_g);
 
 void fill_local_global_index(char* read_type, int myrank, int nintci, int nintcf,
         int** local_global_index, int *metis_idx, int nelems_g);
@@ -157,11 +150,14 @@ int sort_data_by_local_global_index(int nintci_g, int nintcf_g, int nextci_g, in
  * indexes which are local
  *
  * TODO:better comment and rename the function
+ * FIXME: delete not needed arguments
  */
-void count_ext_cells(char* read_type, int myrank, int nprocs,
-                int *local_global_index_g,
-		int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
-		int **lcc_g, int *metis_idx,
-		int *intcell_per_proc, int *extcell_per_proc);
+void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myrank,
+        int* nintci, int* nintcf, int* nextci,
+        int* nextcf, int*** lcc, int* points_count,
+        int*** points, int** elems, double** var, double** cgup, double** oc,
+        double** cnorm, int** local_global_index, int** global_local_index,
+        int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst,
+        int **recv_cnt, int*** recv_lst);
 
 #endif /* INITIALIZATION_ALGORITHMS_H_ */

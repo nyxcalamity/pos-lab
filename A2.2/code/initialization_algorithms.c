@@ -53,9 +53,11 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs, int 
         *nintcf = 0;
         if (!strcmp(part_type, "classic")) {
             if(myrank == nprocs-1) {
-                *nintcf = nelems-(nprocs-1)*((nelems+(nprocs-1))/nprocs) - 1;
+                *nextci = nelems-(nprocs-1)*((nelems+(nprocs-1))/nprocs);
+                *nintcf = *nextci - 1;
             } else {
-                *nintcf = (nelems+(nprocs-1))/nprocs - 1;
+                *nextci = (nelems+(nprocs-1))/nprocs;
+                *nintcf = *nextci - 1;
             }
             for (i=0; i<nelems; ++i) {
                 (*metis_idx)[i] = i / ((nelems+(nprocs-1))/nprocs);
@@ -94,49 +96,22 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs, int 
                 }
             }
             // At the end we need to subtract one because nintcf is the last index not the amount of elements
-            --(*nintcf);
+            *nextci = (*nintcf)--;
         }
     }
     return 0;
 }
 
 
-int allocate_local_variables(char* read_type, int myrank, int nprocs, int *nintci, int *nintcf, 
-        int *nextci,int *nextcf, int ***lcc, double **bs, double **be, double **bn, double **bw, 
-        double **bl, double **bh, double **bp, double **su, int* points_count, int*** points, 
-        int** elems, int **local_global_index, int *intcell_per_proc, int *extcell_per_proc, 
-        int *local_global_index_g, int points_count_g) {
+int allocate_lcc_elems_points(char* read_type, int myrank, int nprocs, int *nintci, int *nintcf,
+       int ***lcc, int* points_count, int*** points,
+        int** elems, int **local_global_index, int points_count_g) {
     int i=0;
     MPI_Status status;
     //TODO: replace strcmp with definitions
     if (!strcmp(read_type, "oneread")) {
-        // Before we allocate, we need to know how much memory to allocate same for all processes
-        *nintci=0;
-        if (myrank == 0) {
-            *nintcf = intcell_per_proc[0]-1;
-            *nextci = intcell_per_proc[0];
-            *nextcf = *nintcf + extcell_per_proc[0];
-            *points_count = points_count_g;
-            for (i=1; i<nprocs; i++) {
-                MPI_Send(&intcell_per_proc[i], 1, MPI_INT, i, NINTCF_SEND_INDEX, MPI_COMM_WORLD);
-                MPI_Send(&extcell_per_proc[i], 1, MPI_INT, i, NEXTCF_SEND_INDEX, MPI_COMM_WORLD);
-                MPI_Send(&points_count_g, 1, MPI_INT, i, POINTSCOUNT_SEND_INDEX, MPI_COMM_WORLD);
-            }
-        } else {
-            MPI_Recv(nintcf,1, MPI_INT, 0, NINTCF_SEND_INDEX, MPI_COMM_WORLD, &status);
-            MPI_Recv(nextcf,1, MPI_INT, 0, NEXTCF_SEND_INDEX, MPI_COMM_WORLD, &status);
-            MPI_Recv(points_count,1, MPI_INT, 0, POINTSCOUNT_SEND_INDEX, MPI_COMM_WORLD, &status);
-            *nextci = *nintcf;
-            // We need to subtract, because we got the number of cells(not the last index!)
-            *nintcf = *nintcf-1;
-            // We need to subtract, because we got the number of cells(not the last index!)
-            *nextcf = *nintcf + *nextcf;
-        }
+
     } else {
-        *nintci = 0;
-        *nintcf = intcell_per_proc[myrank]-1;
-        *nextci = intcell_per_proc[myrank];
-        *nextcf = *nintcf+extcell_per_proc[myrank];
         *points_count = points_count_g;
     }
     if ((*lcc = (int**) malloc(((*nintcf)+1)*sizeof(int*))) == NULL) {
@@ -153,10 +128,44 @@ int allocate_local_variables(char* read_type, int myrank, int nprocs, int *nintc
         fprintf(stderr, "malloc(elems) failed\n");
         return -1;
     }
-    if ((*local_global_index = (int *) malloc(((*nintcf)+1)*sizeof(int))) == NULL) {
-        fprintf(stderr, "malloc(local_global_index) failed\n");
+    if ( (*points = (int **) calloc(*points_count, sizeof(int*))) == NULL) {
+        fprintf(stderr, "malloc() POINTS 1st dim. failed\n");
         return -1;
     }
+    for ( i=0; i<*points_count; i++) {
+        if (((*points)[i] = (int *) calloc(3, sizeof(int))) == NULL) {
+            fprintf(stderr, "malloc() POINTS 2nd dim. failed\n");
+            return -1;
+        }
+    }
+    return 0;
+}
+
+
+int fill_lcc_elems_points(char* read_type, int myrank, int nprocs, int nintci, int nintcf,
+        int **lcc, int points_count, int** points, int* elems,
+        int *local_global_index,  int **lcc_g,
+        int points_count_g, int** points_g, int **elems_g) {
+    int k=0, i=0;
+    MPI_Status status;
+    //TODO: replace strcmp with definitions
+    if (!strcmp(read_type, "oneread")) {
+
+    } else {
+        for(i=nintci; i<nintcf+1; i++) {
+            memcpy(lcc[i], lcc_g[local_global_index[i]], 6*sizeof(int));
+            memcpy(&(elems[8*i]), &(*elems_g)[local_global_index[i]*8], 8*sizeof(int));
+        }
+        for (i=0; i<points_count; i++) {
+            memcpy(points[i], points_g[i], 3*sizeof(int));
+        }
+    }
+    return 0;
+}
+
+
+int allocate_boundary_coef(char* read_type, int myrank, int nprocs, int *nextcf, double **bs, double **be, double **bn, double **bw,
+        double **bl, double **bh, double **bp, double **su) {
     if ((*bs = (double *) malloc(((*nextcf)+1)*sizeof(double))) == NULL) {
         printf("malloc() failed\n");
         return -1;
@@ -189,121 +198,31 @@ int allocate_local_variables(char* read_type, int myrank, int nprocs, int *nintc
         printf("malloc() failed\n");
         return -1;
     }
-    if ( (*points = (int **) calloc(*points_count, sizeof(int*))) == NULL) {
-        fprintf(stderr, "malloc() POINTS 1st dim. failed\n");
-        return -1;
-    }
-    for ( i=0; i<*points_count; i++) {
-        if (((*points)[i] = (int *) calloc(3, sizeof(int))) == NULL) {
-            fprintf(stderr, "malloc() POINTS 2nd dim. failed\n");
-            return -1;
-        }
-    }
     return 0;
 }
 
 
-int send_or_read_data(char* read_type, int myrank, int nprocs, int nintci, int nintcf, int nextci, 
-        int nextcf, int **lcc, double *bs, double *be, double *bn, double *bw, double *bl, 
-        double *bh, double *bp, double *su, int points_count, int** points, int* elems, 
-        int *local_global_index, int *intcell_per_proc, int *extcell_per_proc, int nintci_g, 
-        int nintcf_g, int nextci_g, int nextcf_g, int **lcc_g, double **bs_g, double **be_g, 
-        double **bn_g, double **bw_g, double **bl_g, double **bh_g, double **bp_g, double **su_g, 
-        int points_count_g, int** points_g, int **elems_g, int *local_global_index_g) {
+int fill_boundary_coef(char* read_type, int myrank, int nprocs, int nintci, int nintcf, int nextci,
+        int nextcf, double *bs, double *be, double *bn, double *bw, double *bl,
+        double *bh, double *bp, double *su,
+        int *local_global_index, double **bs_g, double **be_g,
+        double **bn_g, double **bw_g, double **bl_g, double **bh_g, double **bp_g, double **su_g) {
     int k=0, i=0;
     MPI_Status status;
     //TODO: replace strcmp with definitions
     if (!strcmp(read_type, "oneread")) {
-        if (myrank == 0) {
-            //TODO:check allocation status
-            sort_data_by_local_global_index(nintci_g, nintcf_g, nextci_g, nextcf_g, &*bs_g, &*be_g, 
-                    &*bn_g, &*bw_g, &*bl_g, &*bh_g, &*bp_g, &*su_g, &*elems_g, local_global_index_g);
 
-            // Used to send data, from some index(because nodes can have not equal number of cells)
-            int start_idx = 0;
-            // Copy memory for process 0
-            for(i=nintci; i<nintcf+1; i++) {
-                memcpy(lcc[i], lcc_g[local_global_index_g[i]], 6*sizeof(int));
-            }
-            memcpy(bs, *bs_g, intcell_per_proc[0]*sizeof(double));
-            memcpy(be, *be_g, intcell_per_proc[0]*sizeof(double));
-            memcpy(bn, *bn_g, intcell_per_proc[0]*sizeof(double));
-            memcpy(bw, *bw_g, intcell_per_proc[0]*sizeof(double));
-            memcpy(bl, *bl_g, intcell_per_proc[0]*sizeof(double));
-            memcpy(bh, *bh_g, intcell_per_proc[0]*sizeof(double));
-            memcpy(bp, *bp_g, intcell_per_proc[0]*sizeof(double));
-            memcpy(su, *su_g, intcell_per_proc[0]*sizeof(double));
-            for (i=0; i<points_count; i++) {
-                memcpy(points[i], points_g[i], 3*sizeof(int));
-            }
-            memcpy(elems, *elems_g, intcell_per_proc[0]*8*sizeof(int));
-            memcpy(local_global_index, local_global_index_g, intcell_per_proc[0]*sizeof(int));
-            // Send all other data
-            for (k=1; k<nprocs; ++k) {
-                start_idx += intcell_per_proc[k-1];
-                for (i=0; i < intcell_per_proc[k]; ++i) {
-                    MPI_Send(lcc_g[local_global_index_g[start_idx+i]], 6, MPI_INT, k, 0, MPI_COMM_WORLD);
-                }
-                MPI_Send(&(*bs_g)[start_idx], intcell_per_proc[k], MPI_DOUBLE, k, 1, MPI_COMM_WORLD);
-                MPI_Send(&(*be_g)[start_idx], intcell_per_proc[k], MPI_DOUBLE, k, 2, MPI_COMM_WORLD);
-                MPI_Send(&(*bn_g)[start_idx], intcell_per_proc[k], MPI_DOUBLE, k, 3, MPI_COMM_WORLD);
-                MPI_Send(&(*bw_g)[start_idx], intcell_per_proc[k], MPI_DOUBLE, k, 4, MPI_COMM_WORLD);
-                MPI_Send(&(*bl_g)[start_idx], intcell_per_proc[k], MPI_DOUBLE, k, 5, MPI_COMM_WORLD);
-                MPI_Send(&(*bh_g)[start_idx], intcell_per_proc[k], MPI_DOUBLE, k, 6, MPI_COMM_WORLD);
-                MPI_Send(&(*bp_g)[start_idx], intcell_per_proc[k], MPI_DOUBLE, k, 7, MPI_COMM_WORLD);
-                MPI_Send(&(*su_g)[start_idx], intcell_per_proc[k], MPI_DOUBLE, k, 8, MPI_COMM_WORLD);
-                for (i=0; i<points_count; i++ ) {
-                    MPI_Send(points_g[i], 3, MPI_INT, k, 99, MPI_COMM_WORLD);
-                }
-                MPI_Send(&(*elems_g)[start_idx*8], intcell_per_proc[k]*8, MPI_INT, k, 100, MPI_COMM_WORLD);
-                MPI_Send(&local_global_index_g[start_idx], intcell_per_proc[k], MPI_INT, k, 101, MPI_COMM_WORLD);
-            }
-        } else {
-            // Receive data from process 0
-            for (i=nintci; i < nintcf; ++i) {
-                MPI_Recv(lcc[i], 6, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
-            }
-            MPI_Recv(bs, (nintcf-nintci+1), MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &status);
-            MPI_Recv(be, (nintcf-nintci+1), MPI_DOUBLE, 0, 2, MPI_COMM_WORLD, &status);
-            MPI_Recv(bn, (nintcf-nintci+1), MPI_DOUBLE, 0, 3, MPI_COMM_WORLD, &status);
-            MPI_Recv(bw, (nintcf-nintci+1), MPI_DOUBLE, 0, 4, MPI_COMM_WORLD, &status);
-            MPI_Recv(bl, (nintcf-nintci+1), MPI_DOUBLE, 0, 5, MPI_COMM_WORLD, &status);
-            MPI_Recv(bh, (nintcf-nintci+1), MPI_DOUBLE, 0, 6, MPI_COMM_WORLD, &status);
-            MPI_Recv(bp, (nintcf-nintci+1), MPI_DOUBLE, 0, 7, MPI_COMM_WORLD, &status);
-            MPI_Recv(su, (nintcf-nintci+1), MPI_DOUBLE, 0, 8, MPI_COMM_WORLD, &status);
-            for (i=0; i<points_count; i++) {
-                MPI_Recv(points[i], 3, MPI_INT, 0, 99, MPI_COMM_WORLD, &status);
-            }
-            MPI_Recv(elems, (nintcf-nintci+1)*8, MPI_INT, 0, 100, MPI_COMM_WORLD, &status);
-            MPI_Recv(local_global_index, (nintcf-nintci+1), MPI_INT, 0, 101, MPI_COMM_WORLD, &status);
-        }
     } else {
-        //TODO: check allocation status
-        sort_data_by_local_global_index(nintci_g, nintcf_g, nextci_g, nextcf_g, &*bs_g, &*be_g, 
-                &*bn_g, &*bw_g, &*bl_g, &*bh_g, &*bp_g, &*su_g, &*elems_g, local_global_index_g);
-
-        // Used to send data, from some index(because nodes can have not equal number of cells)
-        int start_idx = 0;
-        for (k=0; k<myrank; ++k) {
-            start_idx += intcell_per_proc[k];
-        }
-        // Copy memory for process 0
         for(i=nintci; i<nintcf+1; i++) {
-            memcpy(lcc[i], lcc_g[local_global_index_g[start_idx+i]], 6*sizeof(int));
+            bs[i] = (*bs_g)[local_global_index[i]];
+            be[i] = (*be_g)[local_global_index[i]];
+            bn[i] = (*bn_g)[local_global_index[i]];
+            bw[i] = (*bw_g)[local_global_index[i]];
+            bl[i] = (*bl_g)[local_global_index[i]];
+            bh[i] = (*bh_g)[local_global_index[i]];
+            bp[i] = (*bp_g)[local_global_index[i]];
+            su[i] = (*su_g)[local_global_index[i]];
         }
-        memcpy(bs, &(*bs_g)[start_idx], intcell_per_proc[myrank]*sizeof(double));
-        memcpy(be, &(*be_g)[start_idx], intcell_per_proc[myrank]*sizeof(double));
-        memcpy(bn, &(*bn_g)[start_idx], intcell_per_proc[myrank]*sizeof(double));
-        memcpy(bw, &(*bw_g)[start_idx], intcell_per_proc[myrank]*sizeof(double));
-        memcpy(bl, &(*bl_g)[start_idx], intcell_per_proc[myrank]*sizeof(double));
-        memcpy(bh, &(*bh_g)[start_idx], intcell_per_proc[myrank]*sizeof(double));
-        memcpy(bp, &(*bp_g)[start_idx], intcell_per_proc[myrank]*sizeof(double));
-        memcpy(su, &(*su_g)[start_idx], intcell_per_proc[myrank]*sizeof(double));
-        for (i=0; i<points_count; i++) {
-            memcpy(points[i], points_g[i], 3*sizeof(int));
-        }
-        memcpy(elems, &(*elems_g)[start_idx*8], intcell_per_proc[myrank]*8*sizeof(int));
-        memcpy(local_global_index, &local_global_index_g[start_idx], intcell_per_proc[myrank]*sizeof(int));
     }
     return 0;
 }
@@ -405,61 +324,15 @@ int sort_data_by_local_global_index(int nintci_g, int nintcf_g, int nextci_g, in
 }
 
 
-void count_ext_cells(char* read_type, int myrank, int nprocs,
-        int *local_global_index_g,
-        int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
-        int **lcc_g, int *metis_idx,
-        int *intcell_per_proc, int *extcell_per_proc) {
+void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myrank,
+        int* nintci, int* nintcf, int* nextci,
+        int* nextcf, int*** lcc, int* points_count,
+        int*** points, int** elems, double** var, double** cgup, double** oc,
+        double** cnorm, int** local_global_index, int** global_local_index,
+        int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst,
+        int **recv_cnt, int*** recv_lst) {
     if ((!strcmp(read_type, "oneread") && (myrank == 0)) || !strcmp(read_type, "allread")) {
-        int is_int_cell=0, n_ghost_cells=0, start_idx=0, idx=0, i=0, j=0, proc=0;
-        int g2l[nprocs][nextcf_g+1], isSaved[nextcf_g+1];
-
-        for (i=0; i<nextcf_g+1; ++i) {
-            for (proc=0; proc<nprocs; ++proc) {
-                g2l[proc][i]=-1;
-            }
-        }
-    
-        for (proc=0; proc<nprocs; ++proc) {
-            if (proc != 0) {
-                start_idx += intcell_per_proc[proc-1];
-            }
-            // Set all isSaved to zero
-            memset(isSaved, 0, (nextcf_g+1)*sizeof(int));
-            // Compute external cell
-            extcell_per_proc[proc] = 0;	// TODO: is it good place for it?
-            for (i=0; i<intcell_per_proc[proc]; ++i) {
-                idx = local_global_index_g[start_idx+i];
-                for (j=0; j<6; ++j) {
-                    if (lcc_g[idx][j] >= nintcf_g+1 && !isSaved[lcc_g[idx][j]]) {
-                        isSaved[lcc_g[idx][j]] = 1;
-                        g2l[proc][idx] = intcell_per_proc[proc]+extcell_per_proc[proc];
-                        ++extcell_per_proc[proc];
-                    }
-                }
-            }
-            // End compute external cell
-            memset(isSaved, 0, (nextcf_g+1)*sizeof(int));
-            // Ghost cell and local indexing
-            n_ghost_cells = 0;
-            for (i=0; i<intcell_per_proc[proc]; ++i) {
-                idx = local_global_index_g[start_idx + i];
-                for (j=0; j<6; ++j) {
-                    // Check if this cell is in this processor
-                    is_int_cell = lcc_g[idx][j] <= nintcf_g && metis_idx[lcc_g[idx][j]] == proc;
-                    if (!is_int_cell && !isSaved[lcc_g[idx][j]]) {
-                        isSaved[lcc_g[idx][j]] = 1;
-                        g2l[proc][idx] = intcell_per_proc[proc]+extcell_per_proc[proc]
-                                +n_ghost_cells;
-                        ++n_ghost_cells;
-                    } else {
-                        g2l[proc][local_global_index_g[idx]] = i;
-                    }
-                }
-            }
-            // End ghost cell
-            //TODO:check if we need sum for future milestones
-        	extcell_per_proc[proc] += n_ghost_cells;
-        }
+        // TODO: do it!
+        *nextcf = *nintcf + 10000;
     }
 }

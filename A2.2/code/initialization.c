@@ -74,12 +74,30 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     if (f_status != 0){
         return f_status;
     }
-
+    // Allocate local_global_index and fill it
     fill_local_global_index(read_type, myrank,  *nintci, *nintcf,
             &*local_global_index, metis_idx, nintcf_g - nintci_g +1);
 
-//    count_ext_cells(read_type, myrank, nprocs, local_global_index_g, nintci_g, nintcf_g, nextci_g, nextcf_g,
-//            lcc_g, metis_idx, intcell_per_proc, extcell_per_proc);
+    // ALLOCATE lcc, elems, points
+    f_status = allocate_lcc_elems_points(read_type, myrank, nprocs, nintci, nintcf,
+        &*lcc, &*points_count, &*points, &*elems, &*local_global_index, points_count_g);
+    f_status = fill_lcc_elems_points(read_type, myrank, nprocs, *nintci, *nintcf, *lcc,
+            *points_count, *points, *elems, *local_global_index, lcc_g, points_count_g,
+            points_g, &elems_g);
+
+    build_lists_g2l_next(part_type, read_type, nprocs, myrank,
+            &*nintci, &*nintcf, &*nextci, &*nextcf,
+            &*lcc,
+            &*points_count, &*points, &*elems, &*var, &*cgup, &*oc, &*cnorm,
+            &*local_global_index, &*global_local_index,
+            &*nghb_cnt, &*nghb_to_rank,
+            &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
+
+    f_status = allocate_boundary_coef(read_type, myrank, nprocs, nextcf,
+            &*bs,&*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su);
+    f_status = fill_boundary_coef(read_type, myrank, nprocs, *nintci, *nintcf, *nextci, *nextcf,
+            *bs, *be, *bn, *bw, *bl, *bh, *bp, *su,
+            *local_global_index, &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g);
 
     // Check LCC
     if(OUTPUT_LCC_G) {
@@ -96,19 +114,11 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
                 myrank,*nintcf,*nextcf);
     } // End check lcc
 
-    // ALLOCATE lcc, bs, be, bn, bw, bl, bh, bp, su, points, local_global_index
-//    f_status = allocate_local_variables(read_type, myrank, nprocs, nintci, nintcf, nextci, nextcf,
-//            &*lcc, &*bs,&*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su, &*points_count, &*points, &*elems,
-//            &*local_global_index, intcell_per_proc, extcell_per_proc, local_global_index_g, points_count_g);
     //TODO:externalize error checking
     if (f_status != 0){
         return f_status;
     }
-//    f_status = send_or_read_data(read_type, myrank, nprocs, *nintci, *nintcf, *nextci, *nextcf, *lcc,
-//            *bs, *be, *bn, *bw, *bl, *bh, *bp, *su, *points_count, *points, *elems,
-//            *local_global_index, intcell_per_proc, extcell_per_proc, nintci_g, nintcf_g, nextci_g,
-//            nextcf_g, lcc_g, &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g, points_count_g,
-//            points_g, &elems_g, local_global_index_g);
+
 
     if (OUTPUT_LCC) {
         if (myrank==1) {
@@ -121,65 +131,65 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
         }
     }
 
-//    //TODO:externalize error checking
-//    if (f_status != 0){
-//        return f_status;
-//    }
-//
-//    *var = (double*) calloc(sizeof(double), (*nextcf+1));
-//    *cgup = (double*) calloc(sizeof(double), (*nextcf+1));
-//    *cnorm = (double*) calloc(sizeof(double), (*nintcf+1));
-//
-//    // initialize the arrays
-//    for (i=0; i<=10; i++) {
-//        (*cnorm)[i] = 1.0;
-//    }
-//
-//    for (i=(*nintci); i<=(*nintcf); i++) {
-//        (*var)[i] = 0.0;
-//    }
-//
-//    for (i=(*nintci); i<=(*nintcf); i++) {
-//        (*cgup)[i] = 1.0/((*bp)[i]);
-//    }
-//
-//    for (i=(*nextci); i<=(*nextcf); i++) {
-//        (*var)[i] = 0.0;
-//        (*cgup)[i] = 0.0;
-//        (*bs)[i] = 0.0;
-//        (*be)[i] = 0.0;
-//        (*bn)[i] = 0.0;
-//        (*bw)[i] = 0.0;
-//        (*bh)[i] = 0.0;
-//        (*bl)[i] = 0.0;
-//    }
-//
-//    // VTK check
-////    f_status = vtk_check(file_in, myrank, *nintci, *nintcf, *su, *cgup, *points_count, *points,
-////            *elems, *local_global_index, (*nintcf-*nintci+1));
-//    //TODO:externalize error checking
-//    if (f_status != 0){
-//        return f_status;
-//    }
-//
-//    // Free
-//    //FIXME:code proper memory freeing
-//    if((read_key == POSL_INIT_ONE_READ && myrank == 0) || read_key == POSL_INIT_ALL_READ) {
-////        free(local_global_index_g);
-//        for (i = 0; i < (*nintci + 1); i++) {
-//            free(lcc_g[i]);
-//        }
-//        free(lcc_g);
-//        free(su_g);
-//        free(bp_g);
-//        free(bh_g);
-//        free(bl_g);
-//        free(bw_g);
-//        free(bn_g);
-//        free(be_g);
-//        free(bs_g);
-//        free(elems_g);
-//    }
+    //TODO:externalize error checking
+    if (f_status != 0){
+        return f_status;
+    }
+
+    *var = (double*) calloc(sizeof(double), (*nextcf+1));
+    *cgup = (double*) calloc(sizeof(double), (*nextcf+1));
+    *cnorm = (double*) calloc(sizeof(double), (*nintcf+1));
+
+    // initialize the arrays
+    for (i=0; i<=10; i++) {
+        (*cnorm)[i] = 1.0;
+    }
+
+    for (i=(*nintci); i<=(*nintcf); i++) {
+        (*var)[i] = 0.0;
+    }
+
+    for (i=(*nintci); i<=(*nintcf); i++) {
+        (*cgup)[i] = 1.0/((*bp)[i]);
+    }
+
+    for (i=(*nextci); i<=(*nextcf); i++) {
+        (*var)[i] = 0.0;
+        (*cgup)[i] = 0.0;
+        (*bs)[i] = 0.0;
+        (*be)[i] = 0.0;
+        (*bn)[i] = 0.0;
+        (*bw)[i] = 0.0;
+        (*bh)[i] = 0.0;
+        (*bl)[i] = 0.0;
+    }
+
+    // VTK check
+    f_status = vtk_check(file_in, myrank, *nintci, *nintcf, *su, *cgup, *points_count, *points,
+            *elems, *local_global_index, (*nintcf-*nintci+1));
+    //TODO:externalize error checking
+    if (f_status != 0){
+        return f_status;
+    }
+
+    // Free
+    //FIXME:code proper memory freeing
+    if((read_key == POSL_INIT_ONE_READ && myrank == 0) || read_key == POSL_INIT_ALL_READ) {
+//        free(local_global_index_g);
+        for (i = 0; i < (*nintci + 1); i++) {
+            free(lcc_g[i]);
+        }
+        free(lcc_g);
+        free(su_g);
+        free(bp_g);
+        free(bh_g);
+        free(bl_g);
+        free(bw_g);
+        free(bn_g);
+        free(be_g);
+        free(bs_g);
+        free(elems_g);
+    }
     printf("[INFO] Completed initialization on task #%d\n", myrank);
     /********** END INITIALIZATION **********/
     end_usec = PAPI_get_virt_usec();

@@ -12,6 +12,7 @@ nbproject/
 *.a
 gccg
 pstats.dat
+*.dat
 
 #Latex
 *.aux

@@ -20,5 +20,6 @@
 #define OUTPUT_LCC_G            0
 #define OUTPUT_LCC              0
 #define OUTPUT_NINTCF_NINTCE    0
+#define OUTPUT_VTK              0
 
 #endif

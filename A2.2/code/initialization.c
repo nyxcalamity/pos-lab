@@ -86,6 +86,8 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
             points_g, &elems_g);
 
     build_lists_g2l_next(part_type, read_type, nprocs, myrank,
+            metis_idx,
+            nintci_g, nintcf_g, nextci_g, nextcf_g,
             &*nintci, &*nintcf, &*nextci, &*nextcf,
             &*lcc,
             &*points_count, &*points, &*elems, &*var, &*cgup, &*oc, &*cnorm,
@@ -113,6 +115,11 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
             *bs, *be, *bn, *bw, *bl, *bh, *bp, *su,
             *local_global_index, &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g);
 
+    //TODO:externalize error checking
+    if (f_status != 0){
+        return f_status;
+    }
+
     // Check LCC
     if(OUTPUT_LCC_G) {
         if(myrank==0) {
@@ -127,21 +134,14 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
         printf("rank%d,*nintcf=%d, *nextcf=%d\n",
                 myrank,*nintcf,*nextcf);
     } // End check lcc
-
-    //TODO:externalize error checking
-    if (f_status != 0){
-        return f_status;
-    }
-
-
     if (OUTPUT_LCC) {
-        if (myrank==1) {
+        if (myrank==0) {
             for (i=0;i<(*nintcf)+1;++i) {
 //                printf("i%-6d, %-10d %-10d  %-10d %-10d %-10d %-10d\n",
 //                        i,(*lcc)[i][0],(*lcc)[i][1],(*lcc)[i][2],(*lcc)[i][3],(*lcc)[i][4],(*lcc)[i][5]);
-                printf("i%-6d, %d\n", i, (*local_global_index)[i]);
+//                printf("i%-6d, %d\n", i, (*local_global_index)[i]);
+                printf("i%-6d, %d\n", i, (*global_local_index)[i]);
             }
-            printf("hi\n");
         }
     }
 
@@ -179,8 +179,10 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     }
 
     // VTK check
-    f_status = vtk_check(file_in, myrank, *nintci, *nintcf, *su, *cgup, *points_count, *points,
-            *elems, *local_global_index, (*nintcf-*nintci+1));
+    if (OUTPUT_VTK) {
+        f_status = vtk_check(file_in, myrank, *nintci, *nintcf, *su, *cgup, *points_count, *points,
+                *elems, *local_global_index, (*nintcf-*nintci+1));
+    }
     //TODO:externalize error checking
     if (f_status != 0){
         return f_status;
@@ -203,8 +205,10 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
         free(be_g);
         free(bs_g);
         free(elems_g);
+        // It is not freed in gccg.c
+        free(*global_local_index);
     }
-    printf("[INFO] Completed initialization on task #%d\n", myrank);
+//    printf("[INFO] Completed initialization on task #%d\n", myrank);
     /********** END INITIALIZATION **********/
     end_usec = PAPI_get_virt_usec();
     write_pstats_exectime(input_key, part_key, read_key, myrank, (double)(end_usec-start_usec));

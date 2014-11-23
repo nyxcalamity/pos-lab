@@ -151,8 +151,11 @@ int sort_data_by_local_global_index(int nintci_g, int nintcf_g, int nextci_g, in
  *
  * TODO:better comment and rename the function
  * FIXME: delete not needed arguments
+ * FIXME: check on bad allocation
  */
 void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myrank,
+        int *metis_idx,
+        int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
         int* nintci, int* nintcf, int* nextci,
         int* nextcf, int*** lcc, int* points_count,
         int*** points, int** elems, double** var, double** cgup, double** oc,

@@ -249,16 +249,31 @@ void fill_local_global_index(char* read_type, int myrank, int nintci, int nintcf
 
 
 void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myrank,
+        int *metis_idx,
+        int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
         int* nintci, int* nintcf, int* nextci,
         int* nextcf, int*** lcc, int* points_count,
         int*** points, int** elems, double** var, double** cgup, double** oc,
         double** cnorm, int** local_global_index, int** global_local_index,
         int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst,
         int **recv_cnt, int*** recv_lst) {
+    /*********** Initialize and allocate g2l and tmp variables ************************************/
+    int i=0;
+    if ((*global_local_index = (int *) malloc((nextcf_g+1)*sizeof(int))) == NULL) {
+        fprintf(stderr, "malloc(global_local_index) in build_lists_g2l_next failed\n");
+//        return -1;
+    }
+    // We will fill whole g2l by -1 for easier debugging
+    for (i=0; i<=nextcf_g; ++i) {
+        (*global_local_index)[i] = -1;
+    }
+    /*********** End initialize and allocate g2l and tmp variables ********************************/
+    /************************ Start processing lcc and generating data ****************************/
     if ((!strcmp(read_type, "oneread") && (myrank == 0)) || !strcmp(read_type, "allread")) {
         // TODO: do it!
         *nextcf = *nintcf + 10000;
     }
+    /************************ End processing lcc and generating data ******************************/
 }
 
 

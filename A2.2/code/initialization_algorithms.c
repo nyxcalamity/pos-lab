@@ -248,82 +248,6 @@ void fill_local_global_index(char* read_type, int myrank, int nintci, int nintcf
 }
 
 
-int sort_data_by_local_global_index(int nintci_g, int nintcf_g, int nextci_g, int nextcf_g, 
-        double **bs_g, double **be_g, double **bn_g, double **bw_g, double **bl_g, 
-        double **bh_g, double **bp_g, double **su_g, int **elems_g, int *local_global_index_g) {
-    int i=0;
-    // This two arrays are needed to send data in correct order
-    int *tmp_elems;
-    double *tmp_b;
-    // Not to lose the pointer
-    void *tmp;
-    if ((tmp_elems = (int *) malloc((nintcf_g+1)*8*sizeof(int))) == NULL) {
-        printf("malloc() of tmp_elems in send_or_read_data failed\n");
-        return -1;
-    }
-    if ((tmp_b = (double *) malloc((nintcf_g+1)*sizeof(double))) == NULL) {
-        printf("malloc() of tmp_b in send_or_read_data failed\n");
-        return -1;
-    }
-    for (i=0; i<nintcf_g+1; ++i) {
-        tmp_b[i] = (*bs_g)[local_global_index_g[i]];
-        memcpy(&tmp_elems[8*i], &(*elems_g)[8*local_global_index_g[i]],8*sizeof(int));
-    }
-    //TODO:write a function to do the swap operations
-    tmp = *elems_g;
-    *elems_g = tmp_elems;
-    tmp_elems = tmp;
-    tmp=*bs_g;
-    *bs_g=tmp_b;
-    tmp_b=tmp;
-    for (i=0; i<nintcf_g+1; ++i) {
-        tmp_b[i] = (*be_g)[local_global_index_g[i]];
-    }
-    tmp=*be_g;
-    *be_g=tmp_b;
-    tmp_b=tmp;
-    for (i=0; i<nintcf_g+1; ++i) {
-        tmp_b[i] = (*bn_g)[local_global_index_g[i]];
-    }
-    tmp=*bn_g;
-    *bn_g=tmp_b;
-    tmp_b=tmp;
-    for (i=0; i<nintcf_g+1; ++i) {
-        tmp_b[i] = (*bw_g)[local_global_index_g[i]];
-    }
-    tmp=*bw_g;
-    *bw_g=tmp_b;
-    tmp_b=tmp;
-    for (i=0; i<nintcf_g+1; ++i) {
-        tmp_b[i] = (*bl_g)[local_global_index_g[i]];
-    }
-    tmp=*bl_g;
-    *bl_g=tmp_b;
-    tmp_b=tmp;
-    for (i=0; i<nintcf_g+1; ++i) {
-        tmp_b[i] = (*bh_g)[local_global_index_g[i]];
-    }
-    tmp=*bh_g;
-    *bh_g=tmp_b;
-    tmp_b=tmp;
-    for (i=0; i<nintcf_g+1; ++i) {
-        tmp_b[i] = (*bp_g)[local_global_index_g[i]];
-    }
-    tmp=*bp_g;
-    *bp_g=tmp_b;
-    tmp_b=tmp;
-    for (i=0; i<nintcf_g+1; ++i) {
-        tmp_b[i] = (*su_g)[local_global_index_g[i]];
-    }
-    tmp=*su_g;
-    *su_g=tmp_b;
-    tmp_b=tmp;
-    free(tmp_b);
-    free(tmp_elems);
-    return 0;
-}
-
-
 void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myrank,
         int* nintci, int* nintcf, int* nextci,
         int* nextcf, int*** lcc, int* points_count,
@@ -335,4 +259,27 @@ void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myra
         // TODO: do it!
         *nextcf = *nintcf + 10000;
     }
+}
+
+
+void allocate_send_lists(char* part_type, char* read_type, int nprocs, int myrank,
+        int* nintci, int* nintcf, int* nextci,
+        int* nextcf, int*** lcc, int* points_count,
+        int*** points, int** elems, double** var, double** cgup, double** oc,
+        double** cnorm, int** local_global_index, int** global_local_index,
+        int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst,
+        int **recv_cnt, int*** recv_lst) {
+    if ((!strcmp(read_type, "oneread") && (myrank == 0)) || !strcmp(read_type, "allread")) {
+
+    }
+}
+
+void exchange_lists(char* part_type, char* read_type, int nprocs, int myrank,
+        int* nintci, int* nintcf, int* nextci,
+        int* nextcf, int*** lcc, int* points_count,
+        int*** points, int** elems, double** var, double** cgup, double** oc,
+        double** cnorm, int** local_global_index, int** global_local_index,
+        int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst,
+        int **recv_cnt, int*** recv_lst) {
+
 }

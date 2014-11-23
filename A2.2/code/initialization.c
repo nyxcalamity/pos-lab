@@ -92,6 +92,20 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
             &*local_global_index, &*global_local_index,
             &*nghb_cnt, &*nghb_to_rank,
             &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
+    allocate_send_lists(part_type, read_type, nprocs, myrank,
+            &*nintci, &*nintcf, &*nextci, &*nextcf,
+            &*lcc,
+            &*points_count, &*points, &*elems, &*var, &*cgup, &*oc, &*cnorm,
+            &*local_global_index, &*global_local_index,
+            &*nghb_cnt, &*nghb_to_rank,
+            &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
+    exchange_lists(part_type, read_type, nprocs, myrank,
+            &*nintci, &*nintcf, &*nextci, &*nextcf,
+            &*lcc,
+            &*points_count, &*points, &*elems, &*var, &*cgup, &*oc, &*cnorm,
+            &*local_global_index, &*global_local_index,
+            &*nghb_cnt, &*nghb_to_rank,
+            &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
 
     f_status = allocate_boundary_coef(read_type, myrank, nprocs, nextcf,
             &*bs,&*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su);

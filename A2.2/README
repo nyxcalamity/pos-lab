@@ -4,7 +4,8 @@ ONEREAD								|	ALLREAD
 0: build metis							|	i: build metis
 0: build l2g_g							|	i: build l2g
 0: send needed data for lcc alocateion + metis size 		|	i: allocate (lcc + elems + points)
-0: send metis_idx +elems+points lcc from lcc_g/ i: recv lcc	|	i: copy needed lcc + neede elems + all points
+0: fill_lcc_elems_points: 
+    send metis_idx +elems+points+lcc from lcc_g/ i: recv lcc	|	i: copy needed lcc from lcc_g+needed elems+all points
 
 					i: build g2l + receive lists + count ext cells
 						i: allocate be,bs, ..., su

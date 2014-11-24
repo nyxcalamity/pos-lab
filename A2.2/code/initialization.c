@@ -217,11 +217,8 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
 
     /* ******************* COMMUNICATION MODEL ************************ */
     /* DUMMY INITIALIZATION - DELETE or ADJUST this by your convenience */
-    *nghb_to_rank = (int*) calloc(sizeof(int), *nghb_cnt);
     *send_cnt = (int*) calloc(sizeof(int), *nghb_cnt);
     *send_lst = (int**) calloc(sizeof(int*), *nghb_cnt);
-    *recv_cnt = (int*) calloc(sizeof(int), *nghb_cnt);
-    *recv_lst = (int**) calloc(sizeof(int*), *nghb_cnt);
 
     return 0;
 }

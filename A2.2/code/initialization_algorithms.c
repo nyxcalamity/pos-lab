@@ -260,6 +260,7 @@ void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myra
     /*********** Initialize and allocate g2l and tmp variables ************************************/
     int proc=0, i=0, j=0, is_ghost_cell=0, idx_g=-1, neighbor_rank=-1; /// -1 to track errors
     int n_ghost_cells[nprocs], start_idx_per_proc[nprocs];
+    int nghb_idx=0;    /// Needed for filling of nghb_to_rank
     memset(n_ghost_cells, 0, nprocs*sizeof(int));
     memset(start_idx_per_proc, 0, nprocs*sizeof(int));
     *nextcf = 0;
@@ -337,17 +338,56 @@ void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myra
             }
         }
     }
-    printf("r%d, tmp_recv_cnt[0]=%d, tmp_recv_cnt[1]=%d, tmp_recv_cnt[2]=%d, tmp_recv_cnt[3]=%d\n",
-            myrank, tmp_recv_cnt[0], tmp_recv_cnt[1], tmp_recv_cnt[2], tmp_recv_cnt[3]);
-    printf("r%d, n_ghost_cells[0]=%d, n_ghost_cells[1]=%d, n_ghost_cells[2]=%d, n_ghost_cells[3]=%d\n",
-            myrank, n_ghost_cells[0], n_ghost_cells[1], n_ghost_cells[2], n_ghost_cells[3]);
-    printf("r%d, start_idx_per_proc[0]=%d, start_idx_per_proc[1]=%d, start_idx_per_proc[2]=%d, start_idx_per_proc[3]=%d\n",
-            myrank, start_idx_per_proc[0], start_idx_per_proc[1], start_idx_per_proc[2], start_idx_per_proc[3]);
 
-    // FIXME: compute nextcf with gost cells
-//    *nextcf += n_ghost_cells;
+    // Count neighbors it is already set to zero in gccg.c
+    for (proc=0; proc<nprocs; ++proc) {
+        if (tmp_recv_cnt[proc] !=0) ++(*nghb_cnt);
+    }
 
+    // Allocate and fill nhb_to_rank
+    if ((*nghb_to_rank = (int *) malloc((*nghb_cnt)*sizeof(int))) == NULL) {
+        fprintf(stderr, "malloc(nghb_to_rank) in build_lists_g2l_next failed\n");
+//        return -1;
+    }
+    for (proc=0;proc<nprocs; ++proc) {
+        if(tmp_recv_cnt[proc] !=0) {
+            (*nghb_to_rank)[nghb_idx] = proc;
+            ++nghb_idx;
+        }
+    }
+    // Allocate and fill recv_cnt and recv_lst with global lcc indexing for further use
+    // FIXME: is this good allocation?
+    *recv_cnt = (int*) calloc(sizeof(int), *nghb_cnt);
+    for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {
+        (*recv_cnt)[nghb_idx] = tmp_recv_cnt[ (*nghb_to_rank)[nghb_idx] ];
+    }
+    *recv_lst = (int**) malloc( (*nghb_cnt)*sizeof(int*) );
+    for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {
+        (*recv_lst)[nghb_idx] = (int *) malloc( (*recv_cnt)[nghb_idx] * sizeof(int) );
+    }
+    for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {
+        memcpy( (*recv_lst)[nghb_idx], tmp_recv_lst[ (*nghb_to_rank)[nghb_idx] ],
+                (*recv_cnt)[nghb_idx]*sizeof(int) );
+    }
 
+//    printf("r%d, recv_lst[0][0]=%d, recv_lst[0][1]=%d, recv_lst[0][2]=%d, recv_lst[0][3]=%d\n",
+//            myrank, (*recv_lst)[0][0], (*recv_lst)[0][1], (*recv_lst)[0][2], (*recv_lst)[0][3]);
+//    printf("r%d, recv_cnt[0]=%d, recv_cnt[1]=%d, recv_cnt[2]=%d, recv_cnt[3]=%d\n",
+//            myrank, (*recv_cnt)[0], (*recv_cnt)[1], (*recv_cnt)[2], (*recv_cnt)[3]);
+//    printf("r%d, tmp_recv_cnt[0]=%d, tmp_recv_cnt[1]=%d, tmp_recv_cnt[2]=%d, tmp_recv_cnt[3]=%d\n",
+//            myrank, tmp_recv_cnt[0], tmp_recv_cnt[1], tmp_recv_cnt[2], tmp_recv_cnt[3]);
+//    printf("r%d, n_ghost_cells[0]=%d, n_ghost_cells[1]=%d, n_ghost_cells[2]=%d, n_ghost_cells[3]=%d\n",
+//            myrank, n_ghost_cells[0], n_ghost_cells[1], n_ghost_cells[2], n_ghost_cells[3]);
+//    printf("r%d, start_idx_per_proc[0]=%d, start_idx_per_proc[1]=%d, start_idx_per_proc[2]=%d, start_idx_per_proc[3]=%d\n",
+//            myrank, start_idx_per_proc[0], start_idx_per_proc[1], start_idx_per_proc[2], start_idx_per_proc[3]);
+//TODO:    printf("r%d, nghb_cnt=%d\n", myrank, (*nghb_cnt));
+//TODO:    printf("r%d, nghb_to_rank[0]=%d, nghb_to_rank[1]=%d, nghb_to_rank[2]=%d, nghb_to_rank[3]=%d, nghb_to_rank[4]=%d\n",
+//            myrank, (*nghb_to_rank)[0], (*nghb_to_rank)[1], (*nghb_to_rank)[2], (*nghb_to_rank)[3], (*nghb_to_rank)[3]);
+
+    // Total number of external cells
+    for(proc=0;proc<nprocs; ++proc) {
+        *nextcf += n_ghost_cells[proc];
+    }
     /************************ End processing lcc and generating data ******************************/
     // Free memory
     for (proc=0; proc<nprocs; ++proc) {

@@ -182,6 +182,11 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     if (OUTPUT_VTK) {
         f_status = vtk_check(file_in, myrank, *nintci, *nintcf, *su, *cgup, *points_count, *points,
                 *elems, *local_global_index, (*nintcf-*nintci+1));
+        char szFileName[80];
+        sprintf(szFileName, "%s%s.receive.rank%i.vtk", "out/", "test", myrank);
+        test_distribution(file_in, szFileName, (*recv_lst)[0], (*recv_cnt)[0], *cgup);
+        sprintf(szFileName, "%s%s.send.rank%i.vtk", "out/", "test", myrank);
+        test_distribution(file_in, szFileName, (*send_lst)[0], (*recv_cnt)[0], *cgup);
     }
     //TODO:externalize error checking
     if (f_status != 0){
@@ -213,12 +218,6 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     end_usec = PAPI_get_virt_usec();
     write_pstats_exectime(input_key, part_key, read_key, myrank, (double)(end_usec-start_usec));
     write_pstats_partition(input_key, part_key, myrank, intcell_per_proc[myrank], extcell_per_proc[myrank]);
-
-
-    /* ******************* COMMUNICATION MODEL ************************ */
-    /* DUMMY INITIALIZATION - DELETE or ADJUST this by your convenience */
-    *send_cnt = (int*) calloc(sizeof(int), *nghb_cnt);
-    *send_lst = (int**) calloc(sizeof(int*), *nghb_cnt);
 
     return 0;
 }

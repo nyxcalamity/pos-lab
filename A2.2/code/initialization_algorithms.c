@@ -258,7 +258,20 @@ void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myra
         int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst,
         int **recv_cnt, int*** recv_lst) {
     /*********** Initialize and allocate g2l and tmp variables ************************************/
-    int i=0;
+    int proc=0, i=0, j=0, is_ghost_cell=0, idx_g=-1, neighbor_rank=-1; /// -1 to track errors
+    int n_ghost_cells[nprocs], start_idx_per_proc[nprocs];
+    memset(n_ghost_cells, 0, nprocs*sizeof(int));
+    memset(start_idx_per_proc, 0, nprocs*sizeof(int));
+    *nextcf = 0;
+    // Used to check if we already saved the cel index
+    int is_saved[nextcf_g+1];
+    /** Lists for neighboring information */
+    /// number of cells to be received from each neighbour (size: nprocs)
+    int tmp_recv_cnt[nprocs];
+    memset(tmp_recv_cnt, 0, nprocs*sizeof(int));
+    /// lists of cells to be received from each neighbour (size: nprocs x recv_cnt[*])
+    int *tmp_recv_lst[nprocs];
+
     if ((*global_local_index = (int *) malloc((nextcf_g+1)*sizeof(int))) == NULL) {
         fprintf(stderr, "malloc(global_local_index) in build_lists_g2l_next failed\n");
 //        return -1;
@@ -268,12 +281,78 @@ void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myra
         (*global_local_index)[i] = -1;
     }
     /*********** End initialize and allocate g2l and tmp variables ********************************/
+// TODO: We can do all work in one big loop but then we need to use the buffer before we allocate
+//    memory for tmp_recv_lst
     /************************ Start processing lcc and generating data ****************************/
-    if ((!strcmp(read_type, "oneread") && (myrank == 0)) || !strcmp(read_type, "allread")) {
-        // TODO: do it!
-        *nextcf = *nintcf + 10000;
+    memset(is_saved, 0, (nextcf_g+1)*sizeof(int));
+    // Count number of external cells and fill g2l with external cells, and fill tmp_recv_cnt
+    for (i=0; i<=(*nintcf); ++i) {
+        for (j=0; j<6; ++j) {
+            idx_g = (*lcc)[i][j];
+            neighbor_rank = metis_idx[idx_g];
+            is_ghost_cell = idx_g <= nintcf_g && neighbor_rank != myrank;
+
+            if (!is_saved[idx_g]) {
+                if((*lcc)[i][j] > nintcf_g) {
+                    ++(*nextcf);
+                    is_saved[idx_g] = 1;
+                    (*global_local_index)[idx_g] = (*nintcf) + (*nextcf);
+                } else if (is_ghost_cell) {
+                    ++tmp_recv_cnt[neighbor_rank];
+                    is_saved[idx_g] = 1;
+                }
+            }
+        }
+        // Fill g2l with internal cell
+        (*global_local_index)[(*local_global_index)[i]] = i;
     }
+    /// After the loop nextcf shows amount of elements
+    *nextcf = *nintcf + *nextcf;
+
+    // Allocate tmp_recv_lst
+    for (proc=0; proc<nprocs; ++proc) {
+        if(tmp_recv_cnt[proc] == 0) {
+            tmp_recv_lst[proc] = NULL;
+        } else {
+            tmp_recv_lst[proc] = (int *) calloc(sizeof(int), tmp_recv_cnt[proc]);
+        }
+    }
+    // Fill tmp_recv_list and g2l with ghost cells
+    start_idx_per_proc[0]=0;
+    for(proc=1; proc<nprocs; ++proc) {
+        start_idx_per_proc[proc] = start_idx_per_proc[proc-1] + tmp_recv_cnt[proc-1];
+    }
+    memset(is_saved, 0, (nextcf_g+1)*sizeof(int));
+    for (i=0; i<=(*nintcf); ++i) {
+        for (j=0; j<6; ++j) {
+            idx_g = (*lcc)[i][j];
+            neighbor_rank = metis_idx[idx_g];
+            is_ghost_cell = idx_g <= nintcf_g && neighbor_rank != myrank;
+            if (is_ghost_cell && !is_saved[idx_g]) {
+                is_saved[idx_g] = 1;
+                tmp_recv_lst[neighbor_rank][n_ghost_cells[neighbor_rank]] = idx_g;
+                ++n_ghost_cells[neighbor_rank];
+                (*global_local_index)[idx_g] = (*nextcf) +
+                        start_idx_per_proc[neighbor_rank] + n_ghost_cells[neighbor_rank];
+            }
+        }
+    }
+    printf("r%d, tmp_recv_cnt[0]=%d, tmp_recv_cnt[1]=%d, tmp_recv_cnt[2]=%d, tmp_recv_cnt[3]=%d\n",
+            myrank, tmp_recv_cnt[0], tmp_recv_cnt[1], tmp_recv_cnt[2], tmp_recv_cnt[3]);
+    printf("r%d, n_ghost_cells[0]=%d, n_ghost_cells[1]=%d, n_ghost_cells[2]=%d, n_ghost_cells[3]=%d\n",
+            myrank, n_ghost_cells[0], n_ghost_cells[1], n_ghost_cells[2], n_ghost_cells[3]);
+    printf("r%d, start_idx_per_proc[0]=%d, start_idx_per_proc[1]=%d, start_idx_per_proc[2]=%d, start_idx_per_proc[3]=%d\n",
+            myrank, start_idx_per_proc[0], start_idx_per_proc[1], start_idx_per_proc[2], start_idx_per_proc[3]);
+
+    // FIXME: compute nextcf with gost cells
+//    *nextcf += n_ghost_cells;
+
+
     /************************ End processing lcc and generating data ******************************/
+    // Free memory
+    for (proc=0; proc<nprocs; ++proc) {
+        free(tmp_recv_lst[proc]);
+    }
 }
 
 

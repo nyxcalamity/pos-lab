@@ -270,6 +270,7 @@ void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myra
     /// number of cells to be received from each neighbour (size: nprocs)
     int tmp_recv_cnt[nprocs];
     memset(tmp_recv_cnt, 0, nprocs*sizeof(int));
+    // TODO: try not to use tmp_recv_lst and save all data immediately in revc_lst
     /// lists of cells to be received from each neighbour (size: nprocs x recv_cnt[*])
     int *tmp_recv_lst[nprocs];
 
@@ -385,8 +386,8 @@ void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myra
 //            myrank, (*nghb_to_rank)[0], (*nghb_to_rank)[1], (*nghb_to_rank)[2], (*nghb_to_rank)[3], (*nghb_to_rank)[3]);
 
     // Total number of external cells
-    for(proc=0;proc<nprocs; ++proc) {
-        *nextcf += n_ghost_cells[proc];
+    for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {
+        *nextcf += (*recv_cnt)[nghb_idx];
     }
     /************************ End processing lcc and generating data ******************************/
     // Free memory

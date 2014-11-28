@@ -56,7 +56,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     int extcell_per_proc[nprocs];
     int* local_global_index_g;
 
-    int f_status = read_global_data_or_geometry(file_in, read_type, myrank,  &nintci_g, &nintcf_g, 
+    int f_status = read_init_data(file_in, read_type, myrank,  &nintci_g, &nintcf_g, 
             &nextci_g, &nextcf_g, &lcc_g, &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g,
             &points_count_g, &points_g, &elems_g);
     //TODO:externalize error checking
@@ -64,8 +64,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
         return f_status;
     }
 
-    //FIXME:rename the function so that it was clear what it does
-    f_status = compute_metis(part_type,read_type, myrank, nprocs, nintci_g, nintcf_g, nextci_g,
+    f_status = partition(part_type,read_type, myrank, nprocs, nintci_g, nintcf_g, nextci_g,
             nextcf_g, &*nintci, &*nintcf, &*nextci, &*nextcf, lcc_g, points_count_g, points_g, elems_g, 
             intcell_per_proc, extcell_per_proc, &local_global_index_g, &*local_global_index, &metis_idx);
     //TODO:externalize error checking
@@ -73,7 +72,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
         return f_status;
     }
 
-    fill_local_global_index(read_type, myrank,  *nintci, *nintcf, &*local_global_index, metis_idx, 
+    fill_l2g(read_type, myrank,  *nintci, *nintcf, &*local_global_index, metis_idx, 
             nintcf_g-nintci_g+1);
 
 

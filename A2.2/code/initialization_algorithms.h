@@ -5,7 +5,7 @@
 /**
  * Reads data needed for computation.
  */
-int read_global_data_or_geometry(char* file_in,char* read_type, int myrank, int *nintci, int *nintcf, 
+int read_init_data(char* file_in,char* read_type, int myrank, int *nintci, int *nintcf, 
         int *nextci, int *nextcf, int ***lcc, double **bs, double **be, double **bn, double **bw, 
         double **bl, double **bh, double **bp, double **su, int* points_count, int***points, int** elems);
 
@@ -13,7 +13,7 @@ int read_global_data_or_geometry(char* file_in,char* read_type, int myrank, int 
 /**
  * Computes external and internal cells starting and ending positions.
  */
-int compute_metis(char* part_type, char* read_type, int myrank, int nprocs, int nintci_g,
+int partition(char* part_type, char* read_type, int myrank, int nprocs, int nintci_g,
         int nintcf_g, int nextci_g, int nextcf_g, int *nintci, int *nintcf, int *nextci, int *nextcf,
         int **lcc_g, int points_count_g, int**points_g, int* elems_g, int *intcell_per_proc,
         int *extcell_per_proc, int** local_global_index_g, int** local_global_index, int **metis_idx);
@@ -54,7 +54,7 @@ int fill_boundary_coef(char* read_type, int myrank, int nprocs, int nintci, int 
 /**
  * Computes a 1D array with its indexes as local cell IDs and its values as global cell IDs.
  */
-void fill_local_global_index(char* read_type, int myrank, int nintci, int nintcf, 
+void fill_l2g(char* read_type, int myrank, int nintci, int nintcf, 
         int** local_global_index, int *metis_idx, int nelems_g);
 
 

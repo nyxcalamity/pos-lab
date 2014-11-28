@@ -18,18 +18,17 @@
 #include "util_processors.h"
 #include "posl_definitions.h"
 
-int initialization(char* file_in, char* part_type, char* read_type, int nprocs, int myrank,
-                   int* nintci, int* nintcf, int* nextci,
-                   int* nextcf, int*** lcc, double** bs, double** be, double** bn, double** bw,
-                   double** bl, double** bh, double** bp, double** su, int* points_count,
-                   int*** points, int** elems, double** var, double** cgup, double** oc,
-                   double** cnorm, int** local_global_index, int** global_local_index,
-                   int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst, 
-                   int **recv_cnt, int*** recv_lst) {
+int initialization(char* file_in, char* part_type, char* read_type, int nprocs, int myrank, 
+        int* nintci, int* nintcf, int* nextci, int* nextcf, int*** lcc, double** bs, double** be,
+        double** bn, double** bw, double** bl, double** bh, double** bp, double** su, int* points_count,
+        int*** points, int** elems, double** var, double** cgup, double** oc, double** cnorm, 
+        int** local_global_index, int** global_local_index, int *nghb_cnt, int** nghb_to_rank, 
+        int** send_cnt, int*** send_lst,  int **recv_cnt, int*** recv_lst) {
     long_long start_usec, end_usec;
     int input_key, part_key, read_key;
     process_cl(file_in, part_type, read_type, &input_key, &part_key, &read_key);
     start_usec = PAPI_get_virt_usec();
+    
     /********** START INITIALIZATION **********/
     //FIXME:optimize inits and var names
     // Used by metis function(gives us information to which process belongs our cell)
@@ -57,63 +56,49 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     int extcell_per_proc[nprocs];
     int* local_global_index_g;
 
-    // Initialize and read all global variables or read data for geometry
-    int f_status = read_global_data_or_geometry(file_in, read_type, myrank,  &nintci_g, &nintcf_g,
+    int f_status = read_global_data_or_geometry(file_in, read_type, myrank,  &nintci_g, &nintcf_g, 
             &nextci_g, &nextcf_g, &lcc_g, &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g,
             &points_count_g, &points_g, &elems_g);
     //TODO:externalize error checking
     if (f_status != 0) {
         return f_status;
     }
-    // METIS/NUMBER OF CELLS FOR EACH PROCESSOR/LOCAL TO GLOBAL
-    f_status = compute_metis(part_type,read_type, myrank, nprocs,
-            nintci_g, nintcf_g, nextci_g, nextcf_g,
-            &*nintci, &*nintcf, &*nextci, &*nextcf, lcc_g, points_count_g, points_g, elems_g,
+
+    //FIXME:rename the function so that it was clear what it does
+    f_status = compute_metis(part_type,read_type, myrank, nprocs, nintci_g, nintcf_g, nextci_g,
+            nextcf_g, &*nintci, &*nintcf, &*nextci, &*nextcf, lcc_g, points_count_g, points_g, elems_g, 
             intcell_per_proc, extcell_per_proc, &local_global_index_g, &*local_global_index, &metis_idx);
     //TODO:externalize error checking
     if (f_status != 0){
         return f_status;
     }
-    // Allocate local_global_index and fill it
-    fill_local_global_index(read_type, myrank,  *nintci, *nintcf,
-            &*local_global_index, metis_idx, nintcf_g - nintci_g +1);
 
-    // ALLOCATE lcc, elems, points
-    f_status = allocate_lcc_elems_points(read_type, myrank, nprocs, nintci, nintcf,
-        &*lcc, &*points_count, &*points, &*elems, &*local_global_index, points_count_g);
-    f_status = fill_lcc_elems_points(read_type, myrank, nprocs, *nintci, *nintcf, *lcc,
-            *points_count, *points, *elems, *local_global_index, lcc_g, points_count_g,
-            points_g, &elems_g);
+    fill_local_global_index(read_type, myrank,  *nintci, *nintcf, &*local_global_index, metis_idx, 
+            nintcf_g-nintci_g+1);
 
-    build_lists_g2l_next(part_type, read_type, nprocs, myrank,
-            metis_idx,
-            nintci_g, nintcf_g, nextci_g, nextcf_g,
-            &*nintci, &*nintcf, &*nextci, &*nextcf,
-            &*lcc,
-            &*points_count, &*points, &*elems, &*var, &*cgup, &*oc, &*cnorm,
-            &*local_global_index, &*global_local_index,
-            &*nghb_cnt, &*nghb_to_rank,
-            &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
-    allocate_send_lists(part_type, read_type, nprocs, myrank,
-            &*nintci, &*nintcf, &*nextci, &*nextcf,
-            &*lcc,
-            &*points_count, &*points, &*elems, &*var, &*cgup, &*oc, &*cnorm,
-            &*local_global_index, &*global_local_index,
-            &*nghb_cnt, &*nghb_to_rank,
-            &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
-    exchange_lists(part_type, read_type, nprocs, myrank,
-            &*nintci, &*nintcf, &*nextci, &*nextcf,
-            &*lcc,
-            &*points_count, &*points, &*elems, &*var, &*cgup, &*oc, &*cnorm,
-            &*local_global_index, &*global_local_index,
-            &*nghb_cnt, &*nghb_to_rank,
-            &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
 
-    f_status = allocate_boundary_coef(read_type, myrank, nprocs, nextcf,
-            &*bs,&*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su);
-    f_status = fill_boundary_coef(read_type, myrank, nprocs, *nintci, *nintcf, *nextci, *nextcf,
-            *bs, *be, *bn, *bw, *bl, *bh, *bp, *su,
-            *local_global_index, &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g);
+    f_status = allocate_lcc_elems_points(read_type, myrank, nprocs, nintci, nintcf, &*lcc, 
+            &*points_count, &*points, &*elems, &*local_global_index, points_count_g);
+    f_status = fill_lcc_elems_points(read_type, myrank, nprocs, *nintci, *nintcf, *lcc, *points_count, 
+            *points, *elems, *local_global_index, lcc_g, points_count_g, points_g, &elems_g);
+
+    build_lists_g2l_next(part_type, read_type, nprocs, myrank, metis_idx, nintci_g, nintcf_g, nextci_g,
+            nextcf_g, &*nintci, &*nintcf, &*nextci, &*nextcf, &*lcc, &*points_count, &*points, &*elems,
+            &*var, &*cgup, &*oc, &*cnorm, &*local_global_index, &*global_local_index, &*nghb_cnt, 
+            &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
+    
+    allocate_send_lists(part_type, read_type, nprocs, myrank, &*nintci, &*nintcf, &*nextci, &*nextcf, 
+            &*lcc, &*points_count, &*points, &*elems, &*var, &*cgup, &*oc, &*cnorm, &*local_global_index, 
+            &*global_local_index, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);    
+    exchange_lists(part_type, read_type, nprocs, myrank, &*nintci, &*nintcf, &*nextci, &*nextcf, &*lcc, 
+            &*points_count, &*points, &*elems, &*var, &*cgup, &*oc, &*cnorm, &*local_global_index, 
+            &*global_local_index, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
+
+    f_status = allocate_boundary_coef(read_type, myrank, nprocs, nextcf, &*bs,&*be, &*bn, &*bw, &*bl, 
+            &*bh, &*bp, &*su);
+    f_status = fill_boundary_coef(read_type, myrank, nprocs, *nintci, *nintcf, *nextci, *nextcf, *bs, 
+            *be, *bn, *bw, *bl, *bh, *bp, *su, *local_global_index, &bs_g, &be_g, &bn_g, &bw_g, 
+            &bl_g, &bh_g, &bp_g, &su_g);
 
     //TODO:externalize error checking
     if (f_status != 0){
@@ -134,6 +119,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
         printf("rank%d,*nintcf=%d, *nextcf=%d\n",
                 myrank,*nintcf,*nextcf);
     } // End check lcc
+    
     if (OUTPUT_LCC) {
         if (myrank==0) {
             for (i=0;i<(*nintcf)+1;++i) {
@@ -215,10 +201,10 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     }
 //    printf("[INFO] Completed initialization on task #%d\n", myrank);
     /********** END INITIALIZATION **********/
+    
     end_usec = PAPI_get_virt_usec();
     write_pstats_exectime(input_key, part_key, read_key, myrank, (double)(end_usec-start_usec));
     write_pstats_partition(input_key, part_key, myrank, intcell_per_proc[myrank], extcell_per_proc[myrank]);
 
     return 0;
 }
-

@@ -66,15 +66,12 @@ void fill_local_global_index(char* read_type, int myrank, int nintci, int nintcf
  * FIXME: delete not needed arguments
  * FIXME: check on bad allocation
  */
-void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myrank,
-        int *metis_idx,
-        int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
-        int* nintci, int* nintcf, int* nextci,
-        int* nextcf, int*** lcc, int* points_count,
-        int*** points, int** elems, double** var, double** cgup, double** oc,
-        double** cnorm, int** local_global_index, int** global_local_index,
-        int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst,
-        int **recv_cnt, int*** recv_lst);
+void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myrank, int *metis_idx, 
+        int nintci_g, int nintcf_g, int nextci_g, int nextcf_g, int* nintci, int* nintcf, int* nextci, 
+        int* nextcf, int*** lcc, int* points_count, int*** points, int** elems, double** var, 
+        double** cgup, double** oc, double** cnorm, int** local_global_index, int** global_local_index, 
+        int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst, int **recv_cnt, int*** recv_lst);
+
 
 /**
  * Sends and receives sizes of send list(which is equal to size of receive list) and
@@ -82,25 +79,21 @@ void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myra
  *
  * FIXME: delete unused arguments + better comments
  */
-void allocate_send_lists(char* part_type, char* read_type, int nprocs, int myrank,
-        int* nintci, int* nintcf, int* nextci,
-        int* nextcf, int*** lcc, int* points_count,
-        int*** points, int** elems, double** var, double** cgup, double** oc,
-        double** cnorm, int** local_global_index, int** global_local_index,
-        int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst,
+void allocate_send_lists(char* part_type, char* read_type, int nprocs, int myrank, int* nintci, 
+        int* nintcf, int* nextci, int* nextcf, int*** lcc, int* points_count, int*** points, 
+        int** elems, double** var, double** cgup, double** oc, double** cnorm, int** local_global_index, 
+        int** global_local_index, int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst, 
         int **recv_cnt, int*** recv_lst);
+
 
 /**
  * Send receive lists and get them in send lists.
  *
  * FIXME: better comment + delete unused arguments
  */
-void exchange_lists(char* part_type, char* read_type, int nprocs, int myrank,
-        int* nintci, int* nintcf, int* nextci,
-        int* nextcf, int*** lcc, int* points_count,
-        int*** points, int** elems, double** var, double** cgup, double** oc,
-        double** cnorm, int** local_global_index, int** global_local_index,
-        int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst,
-        int **recv_cnt, int*** recv_lst);
+void exchange_lists(char* part_type, char* read_type, int nprocs, int myrank, int* nintci, int* nintcf, 
+        int* nextci, int* nextcf, int*** lcc, int* points_count, int*** points, int** elems, double** var, 
+        double** cgup, double** oc, double** cnorm, int** local_global_index, int** global_local_index, 
+        int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst, int **recv_cnt, int*** recv_lst);
 
 #endif /* INITIALIZATION_ALGORITHMS_H_ */

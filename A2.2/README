@@ -16,3 +16,7 @@ ONEREAD								|	ALLREAD
 					i: send recv lists to needed processors and fill send lists
 					i: use g2l on lcc, rec_lists, send_lists
 							i: VTK output
+
+
+
+//FIXME:convert global indx to local in send, receive, lcc

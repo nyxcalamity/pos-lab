@@ -17,85 +17,84 @@ int read_global_data_or_geometry(char* file_in,char* read_type, int myrank, int 
     //TODO:replace strcmp with definitions
     if (!strcmp(read_type, "oneread")) {
         if (myrank == 0) {
-            // read-in the input file
             f_status = read_binary_geo(file_in, &*nintci, &*nintcf, &*nextci, &*nextcf, &*lcc, &*bs,
                     &*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su, &*points_count, &*points, &*elems);
         }
     } else {
-        //TODO:implemnete sheer geometry reading
+        //TODO:implement sheer geometry reading
         f_status = read_binary_geo(file_in, &*nintci, &*nintcf, &*nextci, &*nextcf, &*lcc, &*bs, 
-                &*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su, &*points_count,
-                &*points, &*elems);
+                &*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su, &*points_count, &*points, &*elems);
     }
-    if (f_status != 0) {
-        return f_status;
-    } else {
-        return 0;
-    }
+    
+    return f_status;
 }
 
 
 //FIXME:rename this function
 int compute_metis(char* part_type, char* read_type, int myrank, int nprocs, int nintci_g, 
         int nintcf_g, int nextci_g, int nextcf_g, int *nintci, int *nintcf, int *nextci, int *nextcf, 
-        int **lcc_g, int points_count_g, int**points_g, int* elems_g, int *intcell_per_proc, 
-        int *extcell_per_proc, int** local_global_index_g, int** local_global_index, int **metis_idx) {
+        int **lcc_g, int points_count_g, int **points_g, int *elems_g, int *int_cell_per_proc, 
+        int *extcell_per_proc, int **local_global_index_g, int **local_global_index, int **metis_idx) {
     int i=0;
     idx_t nelems, nnodes, ncommon, nparts, objval;
     idx_t *elem_ptr, *elem_idx, *elem_part, *node_part;
+    
     nelems = nintcf_g-nintci_g+1;
     *metis_idx = (int *) calloc(sizeof(int), (nintcf_g-nintci_g+1));
+    
     //TODO: replace strcmp with definitions
     if ((!strcmp(read_type, "oneread") && (myrank == 0))) {
-
+        //FIXME:calculate n*c* for all processes and put them into internal cells
     } else if (!strcmp(read_type, "allread")) {
-        *nintci = 0;
-        *nintcf = 0;
+        *nintci = 0; *nintcf = 0;
         if (!strcmp(part_type, "classic")) {
-            if(myrank == nprocs-1) {
-                *nextci = nelems-(nprocs-1)*((nelems+(nprocs-1))/nprocs);
-                *nintcf = *nextci - 1;
-            } else {
-                *nextci = (nelems+(nprocs-1))/nprocs;
-                *nintcf = *nextci - 1;
-            }
+            //the last processor always gets different number of cells
+            int elem_per_proc = (nelems+(nprocs-1))/nprocs;
+            *nextci = (myrank == nprocs-1) ? nelems-(nprocs-1)*elem_per_proc : elem_per_proc;
+            *nintcf = *nextci-1;
+            
             for (i=0; i<nelems; ++i) {
-                (*metis_idx)[i] = i / ((nelems+(nprocs-1))/nprocs);
+                (*metis_idx)[i] = i/elem_per_proc;
             }
         } else {
+            //initialize variables for metis
             nnodes = points_count_g;
+            //FIXME:perform a proper constant externalization
             ncommon = 4;
             nparts = nprocs;
-
             elem_ptr = (idx_t *) calloc(nelems+1, sizeof(idx_t));
             elem_idx = (idx_t *) calloc(nelems*8, sizeof(idx_t));
             elem_part = (idx_t *) calloc(nelems, sizeof(idx_t));
             node_part = (idx_t *) calloc(nnodes, sizeof(idx_t));
-
+            //TODO:add comments regarding element allocation and input data for metis
             for (i=0; i<(nelems+1); i++) {
                 elem_ptr[i] = 8*i;
             }
             for (i=0; i<(nelems*8); i++) {
                 elem_idx[i] = elems_g[i];
             }
+            
             //TODO: replace strcmp with definitions
+            //perform metis partitioning
             if (!strcmp(part_type, "dual")) {
-                METIS_PartMeshDual(&nelems, &nnodes, elem_ptr, elem_idx, NULL, NULL, &ncommon, &nparts, NULL, NULL,
-                        &objval, elem_part, node_part);
+                METIS_PartMeshDual(&nelems, &nnodes, elem_ptr, elem_idx, NULL, NULL, &ncommon, 
+                        &nparts, NULL, NULL, &objval, elem_part, node_part);
             } else {
-                METIS_PartMeshNodal(&nelems, &nnodes, elem_ptr, elem_idx, NULL, NULL, &nparts, NULL, NULL, &objval,
-                        elem_part, node_part);
+                METIS_PartMeshNodal(&nelems, &nnodes, elem_ptr, elem_idx, NULL, NULL, &nparts, 
+                        NULL, NULL, &objval, elem_part, node_part);
             }
+            
             for (i=0; i<nelems; i++) {
                 (*metis_idx)[i] = (int) elem_part[i];
             }
-            // Calculate nintcf
+            
+            //compute position of last internal cell
             for (i=0; i<nelems; i++) {
                 if (myrank == (*metis_idx)[i]) {
                     (*nintcf) += 1;
                 }
             }
-            // At the end we need to subtract one because nintcf is the last index not the amount of elements
+            //counter starts with 0 thus one needs to be subtracted
             *nextci = (*nintcf)--;
         }
     }
@@ -103,17 +102,18 @@ int compute_metis(char* part_type, char* read_type, int myrank, int nprocs, int 
 }
 
 
-int allocate_lcc_elems_points(char* read_type, int myrank, int nprocs, int *nintci, int *nintcf,
-       int ***lcc, int* points_count, int*** points,
-        int** elems, int **local_global_index, int points_count_g) {
+int allocate_lcc_elems_points(char* read_type, int myrank, int nprocs, int *nintci, int *nintcf, 
+        int ***lcc, int* points_count, int*** points, int** elems, int **local_global_index, 
+        int points_count_g) {
     int i=0;
     MPI_Status status;
     //TODO: replace strcmp with definitions
     if (!strcmp(read_type, "oneread")) {
-
+        //FIXME:send points, lcc size, nintcf and etc
     } else {
         *points_count = points_count_g;
     }
+    
     if ((*lcc = (int**) malloc(((*nintcf)+1)*sizeof(int*))) == NULL) {
         fprintf(stderr, "malloc failed to allocate first dimension of LCC");
         return -1;
@@ -138,6 +138,7 @@ int allocate_lcc_elems_points(char* read_type, int myrank, int nprocs, int *nint
             return -1;
         }
     }
+    
     return 0;
 }
 
@@ -150,7 +151,7 @@ int fill_lcc_elems_points(char* read_type, int myrank, int nprocs, int nintci, i
     MPI_Status status;
     //TODO: replace strcmp with definitions
     if (!strcmp(read_type, "oneread")) {
-
+        //FIXME:todo
     } else {
         for(i=nintci; i<nintcf+1; i++) {
             memcpy(lcc[i], lcc_g[local_global_index[i]], 6*sizeof(int));
@@ -164,8 +165,8 @@ int fill_lcc_elems_points(char* read_type, int myrank, int nprocs, int nintci, i
 }
 
 
-int allocate_boundary_coef(char* read_type, int myrank, int nprocs, int *nextcf, double **bs, double **be, double **bn, double **bw,
-        double **bl, double **bh, double **bp, double **su) {
+int allocate_boundary_coef(char* read_type, int myrank, int nprocs, int *nextcf, double **bs, 
+        double **be, double **bn, double **bw, double **bl, double **bh, double **bp, double **su) {
     if ((*bs = (double *) malloc(((*nextcf)+1)*sizeof(double))) == NULL) {
         printf("malloc() failed\n");
         return -1;
@@ -203,15 +204,14 @@ int allocate_boundary_coef(char* read_type, int myrank, int nprocs, int *nextcf,
 
 
 int fill_boundary_coef(char* read_type, int myrank, int nprocs, int nintci, int nintcf, int nextci,
-        int nextcf, double *bs, double *be, double *bn, double *bw, double *bl,
-        double *bh, double *bp, double *su,
-        int *local_global_index, double **bs_g, double **be_g,
-        double **bn_g, double **bw_g, double **bl_g, double **bh_g, double **bp_g, double **su_g) {
+        int nextcf, double *bs, double *be, double *bn, double *bw, double *bl,  double *bh, 
+        double *bp, double *su, int *local_global_index, double **bs_g, double **be_g, double **bn_g, 
+        double **bw_g, double **bl_g, double **bh_g, double **bp_g, double **su_g) {
     int k=0, i=0;
     MPI_Status status;
     //TODO: replace strcmp with definitions
     if (!strcmp(read_type, "oneread")) {
-
+        //FIXME:todo
     } else {
         for(i=nintci; i<nintcf+1; i++) {
             bs[i] = (*bs_g)[local_global_index[i]];
@@ -228,35 +228,29 @@ int fill_boundary_coef(char* read_type, int myrank, int nprocs, int nintci, int 
 }
 
 
-/**
- * Compute local_global_index in sorted order
- */
-//FIXME: change name of this function + check on bad allocation
-void fill_local_global_index(char* read_type, int myrank, int nintci, int nintcf,
+//FIXME: change name of this function
+void fill_local_global_index(char* read_type, int myrank, int nintci, int nintcf, 
         int** local_global_index, int *metis_idx, int nelems_g) {
-    int i = 0, local_idx=0;
+    int i=0, local_idx=0;
     if ((*local_global_index = (int *) malloc(((nintcf)+1)*sizeof(int))) == NULL) {
+        //FIXME:handle this error
         fprintf(stderr, "malloc(local_global_index) failed\n");
-//        return -1;
     }
+    
     for (i=0; i<nelems_g; ++i) {
-        if (metis_idx[i]==myrank) {
-            (*local_global_index)[local_idx]=i;
+        if (metis_idx[i] == myrank) {
+            (*local_global_index)[local_idx] = i;
             ++local_idx;
         }
     }
 }
 
 
-void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myrank,
-        int *metis_idx,
-        int nintci_g, int nintcf_g, int nextci_g, int nextcf_g,
-        int* nintci, int* nintcf, int* nextci,
-        int* nextcf, int*** lcc, int* points_count,
-        int*** points, int** elems, double** var, double** cgup, double** oc,
-        double** cnorm, int** local_global_index, int** global_local_index,
-        int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst,
-        int **recv_cnt, int*** recv_lst) {
+void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myrank, int *metis_idx, 
+        int nintci_g, int nintcf_g, int nextci_g, int nextcf_g, int* nintci, int* nintcf, int* nextci, 
+        int* nextcf, int*** lcc, int* points_count, int*** points, int** elems, double** var, 
+        double** cgup, double** oc, double** cnorm, int** local_global_index, int** global_local_index, 
+        int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst, int **recv_cnt, int*** recv_lst) {
     /*********** Initialize and allocate g2l and tmp variables ************************************/
     int proc=0, i=0, j=0, is_ghost_cell=0, idx_g=-1, neighbor_rank=-1; /// -1 to track errors
     int n_ghost_cells[nprocs], start_idx_per_proc[nprocs];
@@ -276,7 +270,7 @@ void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myra
 
     if ((*global_local_index = (int *) malloc((nextcf_g+1)*sizeof(int))) == NULL) {
         fprintf(stderr, "malloc(global_local_index) in build_lists_g2l_next failed\n");
-//        return -1;
+        //FIXME:handle this error
     }
     // We will fill whole g2l by -1 for easier debugging
     for (i=0; i<=nextcf_g; ++i) {
@@ -348,7 +342,7 @@ void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myra
     // Allocate and fill nhb_to_rank
     if ((*nghb_to_rank = (int *) malloc((*nghb_cnt)*sizeof(int))) == NULL) {
         fprintf(stderr, "malloc(nghb_to_rank) in build_lists_g2l_next failed\n");
-//        return -1;
+        //FIXME:handle this error
     }
     for (proc=0;proc<nprocs; ++proc) {
         if(tmp_recv_cnt[proc] !=0) {
@@ -397,13 +391,11 @@ void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myra
 }
 
 
-void allocate_send_lists(char* part_type, char* read_type, int nprocs, int myrank,
-        int* nintci, int* nintcf, int* nextci,
-        int* nextcf, int*** lcc, int* points_count,
-        int*** points, int** elems, double** var, double** cgup, double** oc,
-        double** cnorm, int** local_global_index, int** global_local_index,
-        int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst,
-        int **recv_cnt, int*** recv_lst) {
+void allocate_send_lists(char* part_type, char* read_type, int nprocs, int myrank, int* nintci, 
+        int* nintcf, int* nextci, int* nextcf, int*** lcc, int* points_count, int*** points, 
+        int** elems, double** var, double** cgup, double** oc, double** cnorm, 
+        int** local_global_index, int** global_local_index, int *nghb_cnt, int** nghb_to_rank, 
+        int** send_cnt, int*** send_lst, int **recv_cnt, int*** recv_lst) {
     MPI_Status status;
     int nghb_idx=0;
     // Allocate send_cnt
@@ -414,29 +406,31 @@ void allocate_send_lists(char* part_type, char* read_type, int nprocs, int myran
         // Send sizes
         MPI_Send(&(*recv_cnt)[nghb_idx], 1, MPI_INT, (*nghb_to_rank)[nghb_idx], myrank, MPI_COMM_WORLD);
         // Receive sizes
-        MPI_Recv(&(*send_cnt)[nghb_idx],1 , MPI_INT, (*nghb_to_rank)[nghb_idx], (*nghb_to_rank)[nghb_idx], MPI_COMM_WORLD, &status);
+        MPI_Recv(&(*send_cnt)[nghb_idx],1 , MPI_INT, (*nghb_to_rank)[nghb_idx], 
+                (*nghb_to_rank)[nghb_idx], MPI_COMM_WORLD, &status);
     }
     // Allocate send_lst with given sizes
     *send_lst = (int**) malloc( (*nghb_cnt)*sizeof(int*) );
     for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {
-        (*send_lst)[nghb_idx] = (int *) malloc( (*send_cnt)[nghb_idx] * sizeof(int) );
+        (*send_lst)[nghb_idx] = (int *) malloc((*send_cnt)[nghb_idx]*sizeof(int));
     }
 }
 
-void exchange_lists(char* part_type, char* read_type, int nprocs, int myrank,
-        int* nintci, int* nintcf, int* nextci,
-        int* nextcf, int*** lcc, int* points_count,
-        int*** points, int** elems, double** var, double** cgup, double** oc,
-        double** cnorm, int** local_global_index, int** global_local_index,
-        int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst,
-        int **recv_cnt, int*** recv_lst) {
+
+void exchange_lists(char* part_type, char* read_type, int nprocs, int myrank, int* nintci, 
+        int* nintcf, int* nextci, int* nextcf, int*** lcc, int* points_count, int*** points, 
+        int** elems, double** var, double** cgup, double** oc, double** cnorm, 
+        int** local_global_index, int** global_local_index, int *nghb_cnt, int** nghb_to_rank, 
+        int** send_cnt, int*** send_lst, int **recv_cnt, int*** recv_lst) {
     MPI_Status status;
     int nghb_idx=0;
     // Send receive list and save it in send list
     for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {
         // Send sizes
-        MPI_Send((*recv_lst)[nghb_idx], (*recv_cnt)[nghb_idx], MPI_INT, (*nghb_to_rank)[nghb_idx], myrank, MPI_COMM_WORLD);
+        MPI_Send((*recv_lst)[nghb_idx], (*recv_cnt)[nghb_idx], MPI_INT, (*nghb_to_rank)[nghb_idx], 
+                myrank, MPI_COMM_WORLD);
         // Receive sizes
-        MPI_Recv((*send_lst)[nghb_idx], (*send_cnt)[nghb_idx], MPI_INT, (*nghb_to_rank)[nghb_idx], (*nghb_to_rank)[nghb_idx], MPI_COMM_WORLD, &status);
+        MPI_Recv((*send_lst)[nghb_idx], (*send_cnt)[nghb_idx], MPI_INT, (*nghb_to_rank)[nghb_idx], 
+                (*nghb_to_rank)[nghb_idx], MPI_COMM_WORLD, &status);
     }
 }

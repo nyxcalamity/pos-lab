@@ -110,14 +110,14 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
         if(myrank==0) {
             for(i=0;i<nintcf_g+1;++i) {
                 printf("i%-6d,p%d, %-10d %-10d  %-10d %-10d %-10d %-10d\n",
-                        i,metis_idx[i],lcc_g[i][0],lcc_g[i][1],lcc_g[i][2],lcc_g[i][3],lcc_g[i][4],lcc_g[i][5]);
+                        i,metis_idx[i],lcc_g[i][0],lcc_g[i][1],lcc_g[i][2],lcc_g[i][3],lcc_g[i][4],
+                        lcc_g[i][5]);
 //                printf("i%-6d, %d\n", i, local_global_index_g[i]);
             }
         }
     }
     if (OUTPUT_NINTCF_NINTCE) {
-        printf("rank%d,*nintcf=%d, *nextcf=%d\n",
-                myrank,*nintcf,*nextcf);
+        printf("rank%d,*nintcf=%d, *nextcf=%d\n", myrank,*nintcf,*nextcf);
     } // End check lcc
     
     if (OUTPUT_LCC) {

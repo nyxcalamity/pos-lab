@@ -32,7 +32,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     /********** START INITIALIZATION **********/
     //FIXME:optimize inits and var names
     // Used by metis function(gives us information to which process belongs our cell)
-    int *metis_idx, i=0;
+    int *partitioning_map, i=0;
     /** Simulation global variables which are read by first process to pass needed data
      * to other processes or which is needed by METIS */
     int nintci_g, nintcf_g;    /// internal cells start and end index
@@ -66,13 +66,13 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
 
     f_status = partition(part_key, read_key, myrank, nprocs, nintci_g, nintcf_g, nextci_g, nextcf_g, 
             &*nintci, &*nintcf, &*nextci, &*nextcf, lcc_g, points_count_g, points_g, elems_g, 
-            intcell_per_proc, extcell_per_proc, &local_global_index_g, &*local_global_index, &metis_idx);
+            intcell_per_proc, extcell_per_proc, &local_global_index_g, &*local_global_index, &partitioning_map);
     //TODO:externalize error checking
     if (f_status != 0){
         return f_status;
     }
 
-    fill_l2g(myrank, *nintcf, &*local_global_index, metis_idx, nintcf_g-nintci_g+1);
+    fill_l2g(myrank, *nintcf, &*local_global_index, partitioning_map, nintcf_g-nintci_g+1);
 
 
     f_status = allocate_lcc_elems_points(read_key, myrank, nprocs, nintci, nintcf, &*lcc, 
@@ -80,7 +80,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     f_status = fill_lcc_elems_points(read_key, myrank, nprocs, *nintci, *nintcf, *lcc, *points_count, 
             *points, *elems, *local_global_index, lcc_g, points_count_g, points_g, &elems_g);
 
-    build_lists_g2l_next(nprocs, myrank, metis_idx, nintcf_g, nextci_g,
+    build_lists_g2l_next(nprocs, myrank, partitioning_map, nintcf_g, nextci_g,
             nextcf_g, &*nintci, &*nintcf, &*nextci, &*nextcf, &*lcc, &*points_count, &*points, &*elems,
             &*var, &*cgup, &*oc, &*cnorm, &*local_global_index, &*global_local_index, &*nghb_cnt, 
             &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
@@ -104,7 +104,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
         if(myrank==0) {
             for(i=0;i<nintcf_g+1;++i) {
                 printf("i%-6d,p%d, %-10d %-10d  %-10d %-10d %-10d %-10d\n",
-                        i,metis_idx[i],lcc_g[i][0],lcc_g[i][1],lcc_g[i][2],lcc_g[i][3],lcc_g[i][4],
+                        i,partitioning_map[i],lcc_g[i][0],lcc_g[i][1],lcc_g[i][2],lcc_g[i][3],lcc_g[i][4],
                         lcc_g[i][5]);
 //                printf("i%-6d, %d\n", i, local_global_index_g[i]);
             }

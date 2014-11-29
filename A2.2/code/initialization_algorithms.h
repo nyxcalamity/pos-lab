@@ -16,7 +16,7 @@ int read_init_data(char* file_in, int read_key, int myrank, int *nintci, int *ni
 int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
         int nintcf_g, int nextci_g, int nextcf_g, int *nintci, int *nintcf, int *nextci, int *nextcf,
         int **lcc_g, int points_count_g, int**points_g, int* elems_g, int *intcell_per_proc,
-        int *extcell_per_proc, int** local_global_index_g, int** local_global_index, int **metis_idx);
+        int *extcell_per_proc, int** local_global_index_g, int** local_global_index, int **partitioning_map);
 
 
 /**
@@ -54,7 +54,7 @@ int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nin
 /**
  * Computes a 1D array with its indexes as local cell IDs and its values as global cell IDs.
  */
-void fill_l2g(int myrank, int nintcf,  int** local_global_index, int *metis_idx, int nelems_g);
+void fill_l2g(int myrank, int nintcf,  int** local_global_index, int *partitioning_map, int nelems_g);
 
 
 /**
@@ -63,7 +63,7 @@ void fill_l2g(int myrank, int nintcf,  int** local_global_index, int *metis_idx,
  * FIXME: delete unused arguments + improve comments
  * FIXME: check on bad allocation
  */
-void build_lists_g2l_next(int nprocs, int myrank, int *metis_idx, 
+void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, 
         int nintcf_g, int nextci_g, int nextcf_g, int* nintci, int* nintcf, int* nextci, 
         int* nextcf, int*** lcc, int* points_count, int*** points, int** elems, double** var, 
         double** cgup, double** oc, double** cnorm, int** local_global_index, int** global_local_index, 

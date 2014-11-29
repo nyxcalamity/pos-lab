@@ -32,13 +32,13 @@ int read_init_data(char* file_in, int read_key, int myrank, int *nintci, int *ni
 int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g, 
         int nintcf_g, int nextci_g, int nextcf_g, int *nintci, int *nintcf, int *nextci, int *nextcf, 
         int **lcc_g, int points_count_g, int **points_g, int *elems_g, int *int_cell_per_proc, 
-        int *extcell_per_proc, int **local_global_index_g, int **local_global_index, int **metis_idx) {
+        int *extcell_per_proc, int **local_global_index_g, int **local_global_index, int **partitioning_map) {
     int i=0;
     idx_t nelems, nnodes, ncommon, nparts, objval;
     idx_t *elem_ptr, *elem_idx, *elem_part, *node_part;
     
     nelems = nintcf_g-nintci_g+1;
-    *metis_idx = (int *) calloc(sizeof(int), (nintcf_g-nintci_g+1));
+    *partitioning_map = (int *) calloc(sizeof(int), (nintcf_g-nintci_g+1));
     
     if ((read_key == POSL_INIT_ONE_READ) && (myrank == 0)) {
         //FIXME:calculate n*c* for all processes and put them into internal cells
@@ -51,7 +51,7 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
             *nintcf = *nextci-1;
             
             for (i=0; i<nelems; ++i) {
-                (*metis_idx)[i] = i/elem_per_proc;
+                (*partitioning_map)[i] = i/elem_per_proc;
             }
         } else {
             //initialize variables for metis
@@ -81,12 +81,12 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
             }
             
             for (i=0; i<nelems; i++) {
-                (*metis_idx)[i] = (int) elem_part[i];
+                (*partitioning_map)[i] = (int) elem_part[i];
             }
             
             //compute position of last internal cell
             for (i=0; i<nelems; i++) {
-                if (myrank == (*metis_idx)[i]) {
+                if (myrank == (*partitioning_map)[i]) {
                     (*nintcf) += 1;
                 }
             }
@@ -220,7 +220,7 @@ int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nin
 }
 
 
-void fill_l2g(int myrank, int nintcf, int** local_global_index, int *metis_idx, int nelems_g) {
+void fill_l2g(int myrank, int nintcf, int** local_global_index, int *partitioning_map, int nelems_g) {
     int i=0, local_idx=0;
     if ((*local_global_index = (int *) malloc(((nintcf)+1)*sizeof(int))) == NULL) {
         //FIXME:handle this error
@@ -228,7 +228,7 @@ void fill_l2g(int myrank, int nintcf, int** local_global_index, int *metis_idx, 
     }
     
     for (i=0; i<nelems_g; ++i) {
-        if (metis_idx[i] == myrank) {
+        if (partitioning_map[i] == myrank) {
             (*local_global_index)[local_idx] = i;
             ++local_idx;
         }
@@ -236,7 +236,7 @@ void fill_l2g(int myrank, int nintcf, int** local_global_index, int *metis_idx, 
 }
 
 
-void build_lists_g2l_next(int nprocs, int myrank, int *metis_idx, 
+void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, 
         int nintcf_g, int nextci_g, int nextcf_g, int* nintci, int* nintcf, int* nextci, 
         int* nextcf, int*** lcc, int* points_count, int*** points, int** elems, double** var, 
         double** cgup, double** oc, double** cnorm, int** local_global_index, int** global_local_index, 
@@ -275,7 +275,7 @@ void build_lists_g2l_next(int nprocs, int myrank, int *metis_idx,
     for (i=0; i<=(*nintcf); ++i) {
         for (j=0; j<6; ++j) {
             idx_g = (*lcc)[i][j];
-            neighbor_rank = metis_idx[idx_g];
+            neighbor_rank = partitioning_map[idx_g];
             is_ghost_cell = idx_g <= nintcf_g && neighbor_rank != myrank;
 
             if (!is_saved[idx_g]) {
@@ -312,7 +312,7 @@ void build_lists_g2l_next(int nprocs, int myrank, int *metis_idx,
     for (i=0; i<=(*nintcf); ++i) {
         for (j=0; j<6; ++j) {
             idx_g = (*lcc)[i][j];
-            neighbor_rank = metis_idx[idx_g];
+            neighbor_rank = partitioning_map[idx_g];
             is_ghost_cell = idx_g <= nintcf_g && neighbor_rank != myrank;
             if (is_ghost_cell && !is_saved[idx_g]) {
                 is_saved[idx_g] = 1;

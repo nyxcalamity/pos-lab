@@ -80,10 +80,9 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     f_status = fill_lcc_elems_points(read_key, myrank, nprocs, *nintci, *nintcf, *lcc, *points_count, 
             *points, *elems, *local_global_index, lcc_g, points_count_g, points_g, &elems_g);
 
-    build_lists_g2l_next(nprocs, myrank, partitioning_map, nintcf_g, nextci_g,
-            nextcf_g, &*nintci, &*nintcf, &*nextci, &*nextcf, &*lcc, &*points_count, &*points, &*elems,
-            &*var, &*cgup, &*oc, &*cnorm, &*local_global_index, &*global_local_index, &*nghb_cnt, 
-            &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
+    build_lists_g2l_next(nprocs, myrank, partitioning_map, nintcf_g, nextcf_g, &*nintcf, &*nextcf, 
+            &*lcc, &*local_global_index, &*global_local_index, &*nghb_cnt, &*nghb_to_rank, 
+            &*recv_cnt, &*recv_lst);
     
     allocate_send_lists(myrank, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt);    
     exchange_lists(myrank, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);

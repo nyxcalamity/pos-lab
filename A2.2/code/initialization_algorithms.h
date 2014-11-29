@@ -63,11 +63,9 @@ void fill_l2g(int myrank, int nintcf,  int** local_global_index, int *partitioni
  * FIXME: delete unused arguments + improve comments
  * FIXME: check on bad allocation
  */
-void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, 
-        int nintcf_g, int nextci_g, int nextcf_g, int* nintci, int* nintcf, int* nextci, 
-        int* nextcf, int*** lcc, int* points_count, int*** points, int** elems, double** var, 
-        double** cgup, double** oc, double** cnorm, int** local_global_index, int** global_local_index, 
-        int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst, int **recv_cnt, int*** recv_lst);
+void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nintcf_g, int nextcf_g, 
+        int* nintcf, int* nextcf, int*** lcc, int** local_global_index, int** global_local_index, 
+        int *nghb_cnt, int** nghb_to_rank, int **recv_cnt, int*** recv_lst);
 
 
 /**

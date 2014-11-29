@@ -56,46 +56,41 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     int extcell_per_proc[nprocs];
     int* local_global_index_g;
 
-    int f_status = read_init_data(file_in, read_type, myrank,  &nintci_g, &nintcf_g, 
-            &nextci_g, &nextcf_g, &lcc_g, &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g,
-            &points_count_g, &points_g, &elems_g);
+    int f_status = read_init_data(file_in, read_key, myrank,  &nintci_g, &nintcf_g, &nextci_g, 
+            &nextcf_g, &lcc_g, &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g, &points_count_g, 
+            &points_g, &elems_g);
     //TODO:externalize error checking
     if (f_status != 0) {
         return f_status;
     }
 
-    f_status = partition(part_type,read_type, myrank, nprocs, nintci_g, nintcf_g, nextci_g,
-            nextcf_g, &*nintci, &*nintcf, &*nextci, &*nextcf, lcc_g, points_count_g, points_g, elems_g, 
+    f_status = partition(part_key, read_key, myrank, nprocs, nintci_g, nintcf_g, nextci_g, nextcf_g, 
+            &*nintci, &*nintcf, &*nextci, &*nextcf, lcc_g, points_count_g, points_g, elems_g, 
             intcell_per_proc, extcell_per_proc, &local_global_index_g, &*local_global_index, &metis_idx);
     //TODO:externalize error checking
     if (f_status != 0){
         return f_status;
     }
 
-    fill_l2g(read_type, myrank,  *nintci, *nintcf, &*local_global_index, metis_idx, 
-            nintcf_g-nintci_g+1);
+    fill_l2g(myrank, *nintcf, &*local_global_index, metis_idx, nintcf_g-nintci_g+1);
 
 
-    f_status = allocate_lcc_elems_points(read_type, myrank, nprocs, nintci, nintcf, &*lcc, 
+    f_status = allocate_lcc_elems_points(read_key, myrank, nprocs, nintci, nintcf, &*lcc, 
             &*points_count, &*points, &*elems, &*local_global_index, points_count_g);
-    f_status = fill_lcc_elems_points(read_type, myrank, nprocs, *nintci, *nintcf, *lcc, *points_count, 
+    f_status = fill_lcc_elems_points(read_key, myrank, nprocs, *nintci, *nintcf, *lcc, *points_count, 
             *points, *elems, *local_global_index, lcc_g, points_count_g, points_g, &elems_g);
 
-    build_lists_g2l_next(part_type, read_type, nprocs, myrank, metis_idx, nintci_g, nintcf_g, nextci_g,
+    build_lists_g2l_next(nprocs, myrank, metis_idx, nintcf_g, nextci_g,
             nextcf_g, &*nintci, &*nintcf, &*nextci, &*nextcf, &*lcc, &*points_count, &*points, &*elems,
             &*var, &*cgup, &*oc, &*cnorm, &*local_global_index, &*global_local_index, &*nghb_cnt, 
             &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
     
-    allocate_send_lists(part_type, read_type, nprocs, myrank, &*nintci, &*nintcf, &*nextci, &*nextcf, 
-            &*lcc, &*points_count, &*points, &*elems, &*var, &*cgup, &*oc, &*cnorm, &*local_global_index, 
-            &*global_local_index, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);    
-    exchange_lists(part_type, read_type, nprocs, myrank, &*nintci, &*nintcf, &*nextci, &*nextcf, &*lcc, 
-            &*points_count, &*points, &*elems, &*var, &*cgup, &*oc, &*cnorm, &*local_global_index, 
-            &*global_local_index, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
+    allocate_send_lists(myrank, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt);    
+    exchange_lists(myrank, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
 
-    f_status = allocate_boundary_coef(read_type, myrank, nprocs, nextcf, &*bs,&*be, &*bn, &*bw, &*bl, 
+    f_status = allocate_boundary_coef(read_key, myrank, nprocs, nextcf, &*bs,&*be, &*bn, &*bw, &*bl, 
             &*bh, &*bp, &*su);
-    f_status = fill_boundary_coef(read_type, myrank, nprocs, *nintci, *nintcf, *nextci, *nextcf, *bs, 
+    f_status = fill_boundary_coef(read_key, myrank, nprocs, *nintci, *nintcf, *nextci, *nextcf, *bs, 
             *be, *bn, *bw, *bl, *bh, *bp, *su, *local_global_index, &bs_g, &be_g, &bn_g, &bw_g, 
             &bl_g, &bh_g, &bp_g, &su_g);
 
@@ -171,7 +166,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
         sprintf(szFileName, "%s%s.receive.rank%i.vtk", "out/", "test", myrank);
         test_distribution(file_in, szFileName, (*recv_lst)[0], (*recv_cnt)[0], *cgup);
         sprintf(szFileName, "%s%s.send.rank%i.vtk", "out/", "test", myrank);
-        test_distribution(file_in, szFileName, (*send_lst)[0], (*recv_cnt)[0], *cgup);
+        test_distribution(file_in, szFileName, (*send_lst)[0], (*send_cnt)[0], *cgup);
     }
     //TODO:externalize error checking
     if (f_status != 0){

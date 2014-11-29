@@ -6,16 +6,15 @@
 
 #include "initialization_algorithms.h"
 #include "util_read_files.h"
-#include"posl_definitions.h"
+#include "posl_definitions.h"
 
 
-int read_init_data(char* file_in,char* read_type, int myrank, int *nintci, int *nintcf, 
+int read_init_data(char* file_in, int read_key, int myrank, int *nintci, int *nintcf, 
         int *nextci, int *nextcf, int ***lcc, double **bs, double **be, double **bn, double **bw, 
         double **bl, double **bh, double **bp, double **su, int* points_count, int***points, 
         int** elems) {
     int f_status=0;
-    //TODO:replace strcmp with definitions
-    if (!strcmp(read_type, "oneread")) {
+    if (read_key == POSL_INIT_ONE_READ) {
         if (myrank == 0) {
             f_status = read_binary_geo(file_in, &*nintci, &*nintcf, &*nextci, &*nextcf, &*lcc, &*bs,
                     &*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su, &*points_count, &*points, &*elems);
@@ -30,7 +29,7 @@ int read_init_data(char* file_in,char* read_type, int myrank, int *nintci, int *
 }
 
 
-int partition(char* part_type, char* read_type, int myrank, int nprocs, int nintci_g, 
+int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g, 
         int nintcf_g, int nextci_g, int nextcf_g, int *nintci, int *nintcf, int *nextci, int *nextcf, 
         int **lcc_g, int points_count_g, int **points_g, int *elems_g, int *int_cell_per_proc, 
         int *extcell_per_proc, int **local_global_index_g, int **local_global_index, int **metis_idx) {
@@ -41,12 +40,11 @@ int partition(char* part_type, char* read_type, int myrank, int nprocs, int nint
     nelems = nintcf_g-nintci_g+1;
     *metis_idx = (int *) calloc(sizeof(int), (nintcf_g-nintci_g+1));
     
-    //TODO: replace strcmp with definitions
-    if ((!strcmp(read_type, "oneread") && (myrank == 0))) {
+    if ((read_key == POSL_INIT_ONE_READ) && (myrank == 0)) {
         //FIXME:calculate n*c* for all processes and put them into internal cells
-    } else if (!strcmp(read_type, "allread")) {
+    } else if (read_key == POSL_INIT_ALL_READ) {
         *nintci = 0; *nintcf = 0;
-        if (!strcmp(part_type, "classic")) {
+        if (part_key == POSL_PARTITIONING_CLASSIC) {
             //the last processor always gets different number of cells
             int elem_per_proc = (nelems+(nprocs-1))/nprocs;
             *nextci = (myrank == nprocs-1) ? nelems-(nprocs-1)*elem_per_proc : elem_per_proc;
@@ -72,10 +70,9 @@ int partition(char* part_type, char* read_type, int myrank, int nprocs, int nint
             for (i=0; i<(nelems*8); i++) {
                 elem_idx[i] = elems_g[i];
             }
-            
-            //TODO: replace strcmp with definitions
+
             //perform metis partitioning
-            if (!strcmp(part_type, "dual")) {
+            if (part_key == POSL_PARTITIONING_DUAL) {
                 METIS_PartMeshDual(&nelems, &nnodes, elem_ptr, elem_idx, NULL, NULL, &ncommon, 
                         &nparts, NULL, NULL, &objval, elem_part, node_part);
             } else {
@@ -101,13 +98,12 @@ int partition(char* part_type, char* read_type, int myrank, int nprocs, int nint
 }
 
 
-int allocate_lcc_elems_points(char* read_type, int myrank, int nprocs, int *nintci, int *nintcf, 
+int allocate_lcc_elems_points(int read_key, int myrank, int nprocs, int *nintci, int *nintcf, 
         int ***lcc, int* points_count, int*** points, int** elems, int **local_global_index, 
         int points_count_g) {
     int i=0;
     MPI_Status status;
-    //TODO: replace strcmp with definitions
-    if (!strcmp(read_type, "oneread")) {
+    if (read_key == POSL_INIT_ONE_READ) {
         //FIXME:send points, lcc size, nintcf and etc
     } else {
         *points_count = points_count_g;
@@ -142,14 +138,12 @@ int allocate_lcc_elems_points(char* read_type, int myrank, int nprocs, int *nint
 }
 
 
-int fill_lcc_elems_points(char* read_type, int myrank, int nprocs, int nintci, int nintcf,
-        int **lcc, int points_count, int** points, int* elems,
-        int *local_global_index,  int **lcc_g,
+int fill_lcc_elems_points(int read_key, int myrank, int nprocs, int nintci, int nintcf, int **lcc, 
+        int points_count, int** points, int* elems, int *local_global_index,  int **lcc_g, 
         int points_count_g, int** points_g, int **elems_g) {
     int k=0, i=0;
     MPI_Status status;
-    //TODO: replace strcmp with definitions
-    if (!strcmp(read_type, "oneread")) {
+    if (read_key == POSL_INIT_ONE_READ) {
         //FIXME:todo
     } else {
         for(i=nintci; i<nintcf+1; i++) {
@@ -164,7 +158,7 @@ int fill_lcc_elems_points(char* read_type, int myrank, int nprocs, int nintci, i
 }
 
 
-int allocate_boundary_coef(char* read_type, int myrank, int nprocs, int *nextcf, double **bs, 
+int allocate_boundary_coef(int read_key, int myrank, int nprocs, int *nextcf, double **bs, 
         double **be, double **bn, double **bw, double **bl, double **bh, double **bp, double **su) {
     if ((*bs = (double *) malloc(((*nextcf)+1)*sizeof(double))) == NULL) {
         printf("malloc() failed\n");
@@ -202,14 +196,13 @@ int allocate_boundary_coef(char* read_type, int myrank, int nprocs, int *nextcf,
 }
 
 
-int fill_boundary_coef(char* read_type, int myrank, int nprocs, int nintci, int nintcf, int nextci,
+int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nintcf, int nextci,
         int nextcf, double *bs, double *be, double *bn, double *bw, double *bl,  double *bh, 
         double *bp, double *su, int *local_global_index, double **bs_g, double **be_g, double **bn_g, 
         double **bw_g, double **bl_g, double **bh_g, double **bp_g, double **su_g) {
     int k=0, i=0;
     MPI_Status status;
-    //TODO: replace strcmp with definitions
-    if (!strcmp(read_type, "oneread")) {
+    if (read_key == POSL_INIT_ONE_READ) {
         //FIXME:todo
     } else {
         for(i=nintci; i<nintcf+1; i++) {
@@ -227,8 +220,7 @@ int fill_boundary_coef(char* read_type, int myrank, int nprocs, int nintci, int 
 }
 
 
-void fill_l2g(char* read_type, int myrank, int nintci, int nintcf, 
-        int** local_global_index, int *metis_idx, int nelems_g) {
+void fill_l2g(int myrank, int nintcf, int** local_global_index, int *metis_idx, int nelems_g) {
     int i=0, local_idx=0;
     if ((*local_global_index = (int *) malloc(((nintcf)+1)*sizeof(int))) == NULL) {
         //FIXME:handle this error
@@ -244,8 +236,8 @@ void fill_l2g(char* read_type, int myrank, int nintci, int nintcf,
 }
 
 
-void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myrank, int *metis_idx, 
-        int nintci_g, int nintcf_g, int nextci_g, int nextcf_g, int* nintci, int* nintcf, int* nextci, 
+void build_lists_g2l_next(int nprocs, int myrank, int *metis_idx, 
+        int nintcf_g, int nextci_g, int nextcf_g, int* nintci, int* nintcf, int* nextci, 
         int* nextcf, int*** lcc, int* points_count, int*** points, int** elems, double** var, 
         double** cgup, double** oc, double** cnorm, int** local_global_index, int** global_local_index, 
         int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst, int **recv_cnt, int*** recv_lst) {
@@ -389,11 +381,8 @@ void build_lists_g2l_next(char* part_type, char* read_type, int nprocs, int myra
 }
 
 
-void allocate_send_lists(char* part_type, char* read_type, int nprocs, int myrank, int* nintci, 
-        int* nintcf, int* nextci, int* nextcf, int*** lcc, int* points_count, int*** points, 
-        int** elems, double** var, double** cgup, double** oc, double** cnorm, 
-        int** local_global_index, int** global_local_index, int *nghb_cnt, int** nghb_to_rank, 
-        int** send_cnt, int*** send_lst, int **recv_cnt, int*** recv_lst) {
+void allocate_send_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** send_cnt, 
+        int*** send_lst, int **recv_cnt) {
     MPI_Status status;
     int nghb_idx=0;
     // Allocate send_cnt
@@ -415,11 +404,8 @@ void allocate_send_lists(char* part_type, char* read_type, int nprocs, int myran
 }
 
 
-void exchange_lists(char* part_type, char* read_type, int nprocs, int myrank, int* nintci, 
-        int* nintcf, int* nextci, int* nextcf, int*** lcc, int* points_count, int*** points, 
-        int** elems, double** var, double** cgup, double** oc, double** cnorm, 
-        int** local_global_index, int** global_local_index, int *nghb_cnt, int** nghb_to_rank, 
-        int** send_cnt, int*** send_lst, int **recv_cnt, int*** recv_lst) {
+void exchange_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst, 
+        int **recv_cnt, int*** recv_lst) {
     MPI_Status status;
     int nghb_idx=0;
     // Send receive list and save it in send list

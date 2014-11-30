@@ -26,11 +26,10 @@
 #define OUTPUT_LCC_G                0
 #define OUTPUT_LCC                  0
 #define OUTPUT_NINTCF_NINTCE        0
-#define DEBUG_OUTPUT_L2G_G          1
-#define DEBUG_OUTPUT_PARTITIONING   1
+#define DEBUG_OUTPUT_L2G_G          0
+#define DEBUG_OUTPUT_PARTITIONING   0
         
 // VTK output definitions
-#define OUTPUT_VTK                  1        
 #define OUTPUT_VTK                  VTK_RECV_LST
 #define VTK_ALL                     1
 #define VTK_SEND_LST                2

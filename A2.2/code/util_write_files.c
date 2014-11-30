@@ -262,4 +262,70 @@ int vtk_check(char *file_in, int myrank, int nintci, int nintcf, double *su, dou
     free(data_file);
     return 0;
 }
+// FIXME: add an argument which says what we want to show(recv,send,both)
+void vtk_check_lists(char *file_in, int myrank,
+        int *local_global_index, int local_num_elems,
+        int nghb_cnt, int* nghb_to_rank, int* send_cnt, int** send_lst,
+        int *recv_cnt, int** recv_lst) {
+    int start_from=0;
+    int i=0, nghb_idx=0;
+    int local_num_elems_big=local_num_elems;
+    // Compute full size of all elements in processor
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        local_num_elems_big += recv_cnt[nghb_idx] + send_cnt[nghb_idx];
+    }
+
+    int local_global_index_big[local_num_elems_big];
+    double scalars[local_num_elems_big];
+    // Fill local_global_index_big
+    memcpy(local_global_index_big, local_global_index, local_num_elems*sizeof(int));
+    start_from = local_num_elems;
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        for (i=0; i<recv_cnt[nghb_idx]; ++i) {
+            local_global_index_big[start_from + i] = recv_lst[nghb_idx][i];
+        }
+        start_from += recv_cnt[nghb_idx];
+    }
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        for (i=0; i<send_cnt[nghb_idx]; ++i) {
+            local_global_index_big[start_from + i] = send_lst[nghb_idx][i];
+        }
+        start_from += send_cnt[nghb_idx];
+    }
+
+    // Fill scalars
+    // Cells which belongs to process 0 will have value 1 to distinguish it from other cells
+    // and other processors are incremented by one!
+    for(i=0; i<local_num_elems; ++i) {
+        scalars[i] = myrank+1;
+    }
+    start_from = local_num_elems;
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        for (i=0; i<recv_cnt[nghb_idx]; ++i) {
+            scalars[start_from + i] = nghb_to_rank[nghb_idx] + 1;
+        }
+        start_from += recv_cnt[nghb_idx];
+    }
+    //FIXME: fill with proper values
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        for (i=0; i<send_cnt[nghb_idx]; ++i) {
+//            scalars[start_from + i] = nghb_to_rank[nghb_idx] + 1;
+            scalars[start_from + i] = myrank+1;
+        }
+        start_from += send_cnt[nghb_idx];
+    }
+
+    // Write VTK
+    char szFileName[80];
+    //TODO:externalize this string
+    const char *kOutputDirectoryName = "./out/";
+
+    //find base file name
+    char *data_file = strrchr(file_in,'/')+1;
+    //strip data file base name
+    data_file = strndup(data_file, strchr(data_file, '.')-data_file);
+
+    sprintf(szFileName, "%s%s.recv.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
+    test_distribution(file_in, szFileName, local_global_index_big, local_num_elems_big, scalars);
+}
 // end_of_student_code-----------------------------------------------------------------------------------

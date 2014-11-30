@@ -161,11 +161,16 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     if (OUTPUT_VTK) {
         f_status = vtk_check(file_in, myrank, *nintci, *nintcf, *su, *cgup, *points_count, *points,
                 *elems, *local_global_index, (*nintcf-*nintci+1));
-        char szFileName[80];
-        sprintf(szFileName, "%s%s.receive.rank%i.vtk", "out/", "test", myrank);
-        test_distribution(file_in, szFileName, (*recv_lst)[0], (*recv_cnt)[0], *cgup);
-        sprintf(szFileName, "%s%s.send.rank%i.vtk", "out/", "test", myrank);
-        test_distribution(file_in, szFileName, (*send_lst)[0], (*send_cnt)[0], *cgup);
+        vtk_check_lists(file_in, myrank,
+                *local_global_index, (*nintcf-*nintci+1),
+                *nghb_cnt, *nghb_to_rank, *send_cnt, *send_lst,
+                *recv_cnt, *recv_lst);
+//        FIXME: delete
+//        char szFileName[80];
+//        sprintf(szFileName, "%s%s.receive.rank%i.vtk", "out/", "test", myrank);
+//        test_distribution(file_in, szFileName, (*recv_lst)[0], (*recv_cnt)[0], *cgup);
+//        sprintf(szFileName, "%s%s.send.rank%i.vtk", "out/", "test", myrank);
+//        test_distribution(file_in, szFileName, (*send_lst)[0], (*send_cnt)[0], *cgup);
     }
     //TODO:externalize error checking
     if (f_status != 0){

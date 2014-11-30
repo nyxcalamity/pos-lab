@@ -24,11 +24,8 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
         int*** points, int** elems, double** var, double** cgup, double** oc, double** cnorm, 
         int** local_global_index, int** global_local_index, int *nghb_cnt, int** nghb_to_rank, 
         int** send_cnt, int*** send_lst,  int **recv_cnt, int*** recv_lst) {
-    long_long start_usec, end_usec;
     int input_key, part_key, read_key;
     process_cl(file_in, part_type, read_type, &input_key, &part_key, &read_key);
-    start_usec = PAPI_get_virt_usec();
-    
     /********** START INITIALIZATION **********/
     //FIXME:delete
     int m, n;
@@ -254,14 +251,10 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
         // It is not freed in gccg.c
         free(*global_local_index);
     }
-//    printf("[INFO] Completed initialization on task #%d\n", myrank);
+    printf("[INFO] Completed initialization on task #%d\n", myrank);
     /********** END INITIALIZATION **********/
-    
-    end_usec = PAPI_get_virt_usec();
-    write_pstats_exectime(input_key, part_key, read_key, myrank, (double)(end_usec-start_usec));
-    write_pstats_partition(input_key, part_key, myrank, int_cells_per_proc[myrank], extcell_per_proc[myrank]);
-
-    //FIXME:delete
-    printf("Rank #%d completed execution\n", myrank);
+    //FIXME:which neighbour index should be there?
+    write_pstats_communication(input_key, part_key, myrank, nprocs, *nghb_cnt, 1, 
+            *send_cnt, *send_lst, *recv_cnt, *recv_lst);
     return 0;
 }

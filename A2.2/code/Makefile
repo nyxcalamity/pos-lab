@@ -34,4 +34,4 @@ clean: clean-data
 	rm -rf *.o gccg $(LIBPOS)
 
 clean-data:
-	rm -rf out/* pstats.dat
+	rm -rf out/* *.dat

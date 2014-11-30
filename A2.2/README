@@ -1,7 +1,7 @@
 ONEREAD								|	ALLREAD
 								|
-0: read all data						|	i: read all
-0: build metis							|	i: build metis
+0: read all data						|	i: read all data
+0: perform partitioning						|	i: perform partitioning
 0: build l2g_g							|	i: build l2g
 0: send needed data for lcc alocateion + metis size 		|	i: allocate (lcc + elems + points)
 0: fill_lcc_elems_points: 

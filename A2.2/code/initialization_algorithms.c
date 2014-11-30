@@ -144,7 +144,7 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
 }
 
 
-int allocate_lcc_elems_points(int read_key, int myrank, int nprocs, int *nintci, int *nintcf, 
+int allocate_lcc_elems_points(int read_key, int myrank, int nprocs, int *nintci, int *nintcf, int *nextci,
         int ***lcc, int* points_count, int*** points, int** elems, int **local_global_index, 
         int points_count_g, int *int_cells_per_proc) {
     int i=0;
@@ -162,6 +162,7 @@ int allocate_lcc_elems_points(int read_key, int myrank, int nprocs, int *nintci,
             MPI_Recv(nintcf, 1, MPI_INT, 0, POSL_MPI_TAG_NINTCF, MPI_COMM_WORLD, &status);
             MPI_Recv(points_count, 1, MPI_INT, 0, POSL_MPI_TAG_POINTS_COUNT, MPI_COMM_WORLD, &status);
             //decrement the value, since our indexing starts from zero
+            *nextci = *nintcf;
             --(*nintcf);
         }
     } else {

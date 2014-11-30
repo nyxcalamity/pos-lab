@@ -23,7 +23,7 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
  * Exchange or find in global array nintci,nintcf,nextci,nextcf and allocate corresponding memory for
  * elements, points and lcc.
  */
-int allocate_lcc_elems_points(int read_key, int myrank, int nprocs, int *nintci, int *nintcf, 
+int allocate_lcc_elems_points(int read_key, int myrank, int nprocs, int *nintci, int *nintcf, int *nextci,
         int ***lcc, int* points_count, int*** points, int** elems, int **local_global_index, 
         int points_count_g, int *int_cells_per_proc);
 

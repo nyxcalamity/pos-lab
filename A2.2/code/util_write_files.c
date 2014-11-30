@@ -10,6 +10,7 @@
 
 #include "util_write_files.h"
 #include "test_functions.h"
+#include "posl_definitions.h"
 
 int store_simulation_stats(char *in_file_name, char *out_file_name, int nintci, int nintcf,
                            double *var, int total_iters, double residual_ratio) {
@@ -261,5 +262,163 @@ int vtk_check(char *file_in, int myrank, int nintci, int nintcf, double *su, dou
             local_global_index, local_num_elems, scalars);
     free(data_file);
     return 0;
+}
+// FIXME: add an argument which says what we want to show(recv,send,both)
+void vtk_check_lists(char *file_in, int myrank,
+        int *local_global_index, int local_num_elems,
+        int nghb_cnt, int* nghb_to_rank, int* send_cnt, int** send_lst,
+        int *recv_cnt, int** recv_lst, int output_style) {
+    int start_from=0;
+    int i=0, nghb_idx=0;
+    int local_num_elems_big=local_num_elems;
+    // Compute full size of all elements in processor
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        if(output_style == VTK_ALL || output_style == VTK_RECV_LST) {
+            local_num_elems_big += recv_cnt[nghb_idx];
+        }
+        if(output_style == VTK_ALL || output_style == VTK_SEND_LST) {
+            local_num_elems_big += send_cnt[nghb_idx];
+        }
+    }
+
+    int local_global_index_big[local_num_elems_big];
+    double scalars[local_num_elems_big];
+    // Fill local_global_index_big
+    memcpy(local_global_index_big, local_global_index, local_num_elems*sizeof(int));
+    start_from = local_num_elems;
+    if(output_style == VTK_ALL || output_style == VTK_RECV_LST) {
+        for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+            for (i=0; i<recv_cnt[nghb_idx]; ++i) {
+                local_global_index_big[start_from + i] = recv_lst[nghb_idx][i];
+            }
+            start_from += recv_cnt[nghb_idx];
+        }
+    }
+    if(output_style == VTK_ALL || output_style == VTK_SEND_LST) {
+        for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+            for (i=0; i<send_cnt[nghb_idx]; ++i) {
+                local_global_index_big[start_from + i] = send_lst[nghb_idx][i];
+            }
+            start_from += send_cnt[nghb_idx];
+        }
+    }
+
+    // Fill scalars
+    // Cells which belongs to process 0 will have value 1 to distinguish it from other cells
+    // and other processors are incremented by one!
+    for(i=0; i<local_num_elems; ++i) {
+        scalars[i] = myrank+1;
+    }
+    start_from = local_num_elems;
+    if(output_style == VTK_ALL || output_style == VTK_RECV_LST) {
+        for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+            for (i=0; i<recv_cnt[nghb_idx]; ++i) {
+                scalars[start_from + i] = nghb_to_rank[nghb_idx] + 1;
+            }
+            start_from += recv_cnt[nghb_idx];
+        }
+    }
+    if(output_style == VTK_ALL || output_style == VTK_SEND_LST) {
+        for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+            for (i=0; i<send_cnt[nghb_idx]; ++i) {
+                scalars[start_from + i] = nghb_to_rank[nghb_idx] + 0.5;
+            }
+            start_from += send_cnt[nghb_idx];
+        }
+    }
+
+    // Write VTK
+    char szFileName[80];
+    //TODO:externalize this string
+    const char *kOutputDirectoryName = "./out/";
+
+    //find base file name
+    char *data_file = strrchr(file_in,'/')+1;
+    //strip data file base name
+    data_file = strndup(data_file, strchr(data_file, '.')-data_file);
+
+    if(output_style == VTK_SEND_LST) {
+        sprintf(szFileName, "%s%s.Send.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
+    } else if(output_style == VTK_RECV_LST) {
+        sprintf(szFileName, "%s%s.Recv.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
+    } else {
+        sprintf(szFileName, "%s%s.RecvandSend.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
+    }
+
+
+    test_distribution(file_in, szFileName, local_global_index_big, local_num_elems_big, scalars);
+}
+
+void vtk_check_neighbour(char *file_in, int myrank,
+        int *local_global_index, int local_num_elems,
+        int nghb_cnt, int* nghb_to_rank, int* send_cnt, int** send_lst,
+        int *recv_cnt, int** recv_lst, int output_style, int neighbour) {
+    int start_from=0;
+    int i=0;
+    int local_num_elems_big=local_num_elems;
+    // Compute full size of all elements in processor
+    if(output_style == VTK_ALL || output_style == VTK_RECV_LST) {
+        local_num_elems_big += recv_cnt[neighbour];
+    }
+    if(output_style == VTK_ALL || output_style == VTK_SEND_LST) {
+        local_num_elems_big += send_cnt[neighbour];
+    }
+
+    int local_global_index_big[local_num_elems_big];
+    double scalars[local_num_elems_big];
+    // Fill local_global_index_big
+    memcpy(local_global_index_big, local_global_index, local_num_elems*sizeof(int));
+    start_from = local_num_elems;
+    if(output_style == VTK_ALL || output_style == VTK_RECV_LST) {
+        for (i=0; i<recv_cnt[neighbour]; ++i) {
+            local_global_index_big[start_from + i] = recv_lst[neighbour][i];
+        }
+        start_from += recv_cnt[neighbour];
+    }
+    if(output_style == VTK_ALL || output_style == VTK_SEND_LST) {
+        for (i=0; i<send_cnt[neighbour]; ++i) {
+            local_global_index_big[start_from + i] = send_lst[neighbour][i];
+        }
+    }
+
+    // Fill scalars
+    // Cells which belongs to process 0 will have value 1 to distinguish it from other cells
+    // and other processors are incremented by one!
+    for(i=0; i<local_num_elems; ++i) {
+        scalars[i] = myrank+1;
+    }
+    start_from = local_num_elems;
+    if(output_style == VTK_ALL || output_style == VTK_RECV_LST) {
+        for (i=0; i<recv_cnt[neighbour]; ++i) {
+            scalars[start_from + i] = nghb_to_rank[neighbour] + 1;
+        }
+        start_from += recv_cnt[neighbour];
+    }
+    if(output_style == VTK_ALL || output_style == VTK_SEND_LST) {
+        for (i=0; i<send_cnt[neighbour]; ++i) {
+            scalars[start_from + i] = nghb_to_rank[neighbour] + 0.5;
+        }
+    }
+
+    // Write VTK
+    char szFileName[80];
+    //TODO:externalize this string
+    const char *kOutputDirectoryName = "./out/";
+
+    //find base file name
+    char *data_file = strrchr(file_in,'/')+1;
+    //strip data file base name
+    data_file = strndup(data_file, strchr(data_file, '.')-data_file);
+
+    if(output_style == VTK_SEND_LST) {
+        sprintf(szFileName, "%s%s.Send.rank%i.neighbour%d.vtk", kOutputDirectoryName, data_file, myrank, neighbour);
+    } else if(output_style == VTK_RECV_LST) {
+        sprintf(szFileName, "%s%s.Recv.rank%i.neighbour%d.vtk", kOutputDirectoryName, data_file, myrank, neighbour);
+    } else {
+        sprintf(szFileName, "%s%s.RecvandSend.neighbour%d.rank%i.vtk", kOutputDirectoryName, data_file, myrank, neighbour);
+    }
+
+
+    test_distribution(file_in, szFileName, local_global_index_big, local_num_elems_big, scalars);
 }
 // end_of_student_code-----------------------------------------------------------------------------------

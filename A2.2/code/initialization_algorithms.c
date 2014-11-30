@@ -628,10 +628,9 @@ void exchange_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** send_cn
         MPI_Irecv((*send_lst)[nghb_idx], (*send_cnt)[nghb_idx], MPI_INT, (*nghb_to_rank)[nghb_idx], 
                 (*nghb_to_rank)[nghb_idx], MPI_COMM_WORLD, &request_recv[nghb_idx]);
     }
-    
     // Synchronize everything
     for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {
         MPI_Wait(&request_send[nghb_idx], &status);
         MPI_Wait(&request_recv[nghb_idx], &status);
-     }
+    }
 }

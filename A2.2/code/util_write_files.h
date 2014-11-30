@@ -88,7 +88,7 @@ int vtk_check(char *file_in, int myrank,
 void vtk_check_lists(char *file_in, int myrank,
         int *local_global_index, int local_num_elems,
         int nghb_cnt, int* nghb_to_rank, int* send_cnt, int** send_lst,
-        int *recv_cnt, int** recv_lst);
+        int *recv_cnt, int** recv_lst, int output_style);
 // end_of_student_code-----------------------------------------------------------------------------------
 #endif /* XWRITE_H_ */
 

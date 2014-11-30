@@ -485,8 +485,10 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
     for (i=0; i<=(*nintcf); ++i) {
         for (j=0; j<6; ++j) {
             idx_g = (*lcc)[i][j];
-            neighbor_rank = partitioning_map[idx_g];
-            is_ghost_cell = idx_g <= nintcf_g && neighbor_rank != myrank;
+            if(idx_g<=nintcf_g) {
+                neighbor_rank = partitioning_map[idx_g];
+                is_ghost_cell = neighbor_rank != myrank;
+            }
 
             if (!is_saved[idx_g]) {
                 if((*lcc)[i][j] > nintcf_g) {
@@ -522,8 +524,12 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
     for (i=0; i<=(*nintcf); ++i) {
         for (j=0; j<6; ++j) {
             idx_g = (*lcc)[i][j];
-            neighbor_rank = partitioning_map[idx_g];
-            is_ghost_cell = idx_g <= nintcf_g && neighbor_rank != myrank;
+            if(idx_g<=nintcf_g) {
+                neighbor_rank = partitioning_map[idx_g];
+                is_ghost_cell = neighbor_rank != myrank;
+            } else {
+                is_ghost_cell = 0;
+            }
             if (is_ghost_cell && !is_saved[idx_g]) {
                 is_saved[idx_g] = 1;
                 tmp_recv_lst[neighbor_rank][n_ghost_cells[neighbor_rank]] = idx_g;

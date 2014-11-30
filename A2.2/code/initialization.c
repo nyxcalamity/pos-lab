@@ -95,8 +95,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
         printf("\n");
     }
     
-    
-    f_status = allocate_lcc_elems_points(read_key, myrank, nprocs, nintci, nintcf, &*lcc, &*points_count, 
+    f_status = allocate_lcc_elems_points(read_key, myrank, nprocs, nintci, nintcf, nextci, &*lcc, &*points_count,
             &*points, &*elems, &*local_global_index, points_count_g, int_cells_per_proc);
     
     //FIXME:delete

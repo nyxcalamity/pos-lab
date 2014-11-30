@@ -406,13 +406,19 @@ void exchange_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** send_cn
         int **recv_cnt, int*** recv_lst) {
     MPI_Status status;
     int nghb_idx=0;
+    MPI_Request request_send[*nghb_cnt], request_recv[*nghb_cnt];
     // Send receive list and save it in send list
     for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {
         // Send sizes
-        MPI_Send((*recv_lst)[nghb_idx], (*recv_cnt)[nghb_idx], MPI_INT, (*nghb_to_rank)[nghb_idx], 
-                myrank, MPI_COMM_WORLD);
+        MPI_Isend((*recv_lst)[nghb_idx], (*recv_cnt)[nghb_idx], MPI_INT, (*nghb_to_rank)[nghb_idx],
+                myrank, MPI_COMM_WORLD, &request_send[nghb_idx]);
         // Receive sizes
-        MPI_Recv((*send_lst)[nghb_idx], (*send_cnt)[nghb_idx], MPI_INT, (*nghb_to_rank)[nghb_idx], 
-                (*nghb_to_rank)[nghb_idx], MPI_COMM_WORLD, &status);
+        MPI_Irecv((*send_lst)[nghb_idx], (*send_cnt)[nghb_idx], MPI_INT, (*nghb_to_rank)[nghb_idx],
+                (*nghb_to_rank)[nghb_idx], MPI_COMM_WORLD, &request_recv[nghb_idx]);
+    }
+    // Synchronize everything
+    for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {
+        MPI_Wait(&request_send[nghb_idx], &status);
+        MPI_Wait(&request_recv[nghb_idx], &status);
     }
 }

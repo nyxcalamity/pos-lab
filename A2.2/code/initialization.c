@@ -30,6 +30,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     start_usec = PAPI_get_virt_usec();
     
     /********** START INITIALIZATION **********/
+    int m,n;
     //FIXME:optimize inits and var names
     // Used by metis function(gives us information to which process belongs our cell)
     int *partitioning_map, i=0;
@@ -51,10 +52,10 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     /** Partitioning data */
     /// Metis will compute amount of cells for each process(classical example we will set it "manually")
     /// we can not be sure that all processors have the same amount of cells
-    int intcell_per_proc[nprocs];
+    int int_cells_per_proc[nprocs];
     /// we can not be sure that all processors have the same amount of cells
     int extcell_per_proc[nprocs];
-    int* local_global_index_g;
+    int** local_global_index_g;
 
     int f_status = read_init_data(file_in, read_key, myrank,  &nintci_g, &nintcf_g, &nextci_g, 
             &nextcf_g, &lcc_g, &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g, &points_count_g, 
@@ -66,32 +67,73 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
 
     f_status = partition(part_key, read_key, myrank, nprocs, nintci_g, nintcf_g, nextci_g, nextcf_g, 
             &*nintci, &*nintcf, &*nextci, &*nextcf, lcc_g, points_count_g, points_g, elems_g, 
-            intcell_per_proc, extcell_per_proc, &local_global_index_g, &*local_global_index, &partitioning_map);
+            int_cells_per_proc, extcell_per_proc, local_global_index_g, &*local_global_index, 
+            &partitioning_map);
     //TODO:externalize error checking
     if (f_status != 0){
         return f_status;
     }
-
-    fill_l2g(myrank, *nintcf, &*local_global_index, partitioning_map, nintcf_g-nintci_g+1);
-
-
-    f_status = allocate_lcc_elems_points(read_key, myrank, nprocs, nintci, nintcf, &*lcc, 
-            &*points_count, &*points, &*elems, &*local_global_index, points_count_g);
+    
+    if (DEBUG_OUTPUT_PARTITIONING && read_key == POSL_INIT_ONE_READ && myrank == 0) {
+        printf("Int_cells_per_proc at proc #%d\n", myrank);
+        for (m=0; m<nprocs; ++m) {
+            printf("%d ", int_cells_per_proc[m]);
+        }
+        printf("\n");
+    }
+    bcast_partitioning(read_key, myrank, &partitioning_map, &nintci_g, &nintcf_g, &nextci_g, &nextcf_g);
+    
+    if (DEBUG_OUTPUT_PARTITIONING && read_key == POSL_INIT_ONE_READ) {
+        printf("partition_map at proc #%d\n", myrank);
+        for (m=0; m<30; ++m) {
+            printf("%d ", partitioning_map[m]);
+        }
+        printf("\n");
+        for (m=nextci_g-1; m>(nextci_g-30); --m) {
+            printf("%d ", partitioning_map[m]);
+        }
+        printf("\n");
+    }
+    
+    
+    f_status = allocate_lcc_elems_points(read_key, myrank, nprocs, nintci, nintcf, &*lcc, &*points_count, 
+            &*points, &*elems, &*local_global_index, points_count_g, int_cells_per_proc);
+    
+//    printf("#%d number of global elements = %d\n", myrank, nintcf_g-nintci_g+1);
+    fill_l2g(read_key, myrank, nprocs, *nintcf, &*local_global_index, &local_global_index_g, 
+            partitioning_map, nintcf_g-nintci_g+1, int_cells_per_proc);
+    
+    if (DEBUG_OUTPUT_L2G_G) {
+        printf("local2global index at proc #%d\n", myrank);
+        for (m=0; m<20; ++m) {
+            printf("%d ", local_global_index[m]);
+        }
+        printf("\n");
+    }
+    
     f_status = fill_lcc_elems_points(read_key, myrank, nprocs, *nintci, *nintcf, *lcc, *points_count, 
-            *points, *elems, *local_global_index, lcc_g, points_count_g, points_g, &elems_g);
-
+            *points, *elems, *local_global_index, local_global_index_g, lcc_g, points_count_g, points_g, &elems_g, 
+            int_cells_per_proc);
+    printf("Rank #%d got past lcc filling\n", myrank);
+    
     build_lists_g2l_next(nprocs, myrank, partitioning_map, nintcf_g, nextcf_g, &*nintcf, &*nextcf, 
             &*lcc, &*local_global_index, &*global_local_index, &*nghb_cnt, &*nghb_to_rank, 
             &*recv_cnt, &*recv_lst);
+    printf("Rank #%d got past list building\n", myrank);
     
-    allocate_send_lists(myrank, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt);    
+    allocate_send_lists(myrank, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt);
+    printf("Rank #%d got past send list building\n", myrank);
+    
     exchange_lists(myrank, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
-
-    f_status = allocate_boundary_coef(read_key, myrank, nprocs, nextcf, &*bs,&*be, &*bn, &*bw, &*bl, 
-            &*bh, &*bp, &*su);
+    printf("Rank #%d got past list exchange\n", myrank);
+    
+    f_status = allocate_boundary_coef(nextcf, &*bs,&*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su);
+    printf("Rank #%d got past boundary coef allocation\n", myrank);
+    
     f_status = fill_boundary_coef(read_key, myrank, nprocs, *nintci, *nintcf, *nextci, *nextcf, *bs, 
-            *be, *bn, *bw, *bl, *bh, *bp, *su, *local_global_index, &bs_g, &be_g, &bn_g, &bw_g, 
-            &bl_g, &bh_g, &bp_g, &su_g);
+            *be, *bn, *bw, *bl, *bh, *bp, *su, *local_global_index, local_global_index_g, 
+            &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g, int_cells_per_proc);
+    printf("Rank #%d got past boundary coef filling\n", myrank);
 
     //TODO:externalize error checking
     if (f_status != 0){
@@ -197,7 +239,8 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     
     end_usec = PAPI_get_virt_usec();
     write_pstats_exectime(input_key, part_key, read_key, myrank, (double)(end_usec-start_usec));
-    write_pstats_partition(input_key, part_key, myrank, intcell_per_proc[myrank], extcell_per_proc[myrank]);
+    write_pstats_partition(input_key, part_key, myrank, int_cells_per_proc[myrank], extcell_per_proc[myrank]);
 
+    printf("Rank #%d completed execution\n", myrank);
     return 0;
 }

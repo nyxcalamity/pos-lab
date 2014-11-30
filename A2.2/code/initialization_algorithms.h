@@ -25,21 +25,21 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
  */
 int allocate_lcc_elems_points(int read_key, int myrank, int nprocs, int *nintci, int *nintcf, 
         int ***lcc, int* points_count, int*** points, int** elems, int **local_global_index, 
-        int points_count_g);
+        int points_count_g, int *int_cells_per_proc);
 
 
 /**
  * Exchange or copy from global all local data.
  */
 int fill_lcc_elems_points(int read_key, int myrank, int nprocs, int nintci, int nintcf, int **lcc, 
-        int points_count, int** points, int* elems, int *local_global_index,  int **lcc_g, 
-        int points_count_g, int** points_g, int **elems_g);
+        int points_count, int** points, int* elems, int *local_global_index, int **local_global_index_g, 
+        int **lcc_g, int points_count_g, int** points_g, int **elems_g, int *int_cells_per_proc);
 
 /**
  * Allocates local memory for various boundary coefficients.
  */
-int allocate_boundary_coef(int read_key, int myrank, int nprocs, int *nextcf, double **bs, 
-        double **be, double **bn, double **bw, double **bl, double **bh, double **bp, double **su);
+int allocate_boundary_coef(int *nextcf, double **bs, double **be, double **bn, double **bw, double **bl, 
+        double **bh, double **bp, double **su);
 
 
 /**
@@ -47,14 +47,16 @@ int allocate_boundary_coef(int read_key, int myrank, int nprocs, int *nextcf, do
  */
 int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nintcf, int nextci,
         int nextcf, double *bs, double *be, double *bn, double *bw, double *bl,  double *bh, 
-        double *bp, double *su, int *local_global_index, double **bs_g, double **be_g, double **bn_g, 
-        double **bw_g, double **bl_g, double **bh_g, double **bp_g, double **su_g);
+        double *bp, double *su, int *local_global_index, int **local_global_index_g, double **bs_g, 
+        double **be_g, double **bn_g, double **bw_g, double **bl_g, double **bh_g, double **bp_g, 
+        double **su_g, int *int_cells_per_proc);
 
 
 /**
  * Computes a 1D array with its indexes as local cell IDs and its values as global cell IDs.
  */
-void fill_l2g(int myrank, int nintcf,  int** local_global_index, int *partitioning_map, int nelems_g);
+void fill_l2g(int read_key, int myrank, int nproc, int nintcf,  int** local_global_index, 
+        int ***local_global_index_g, int *partitioning_map, int nelems_g, int *int_cells_per_proc);
 
 
 /**
@@ -84,5 +86,11 @@ void allocate_send_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** se
  */
 void exchange_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst, 
         int **recv_cnt, int*** recv_lst);
+
+/**
+ * Broadcasts partitioning map to all processors, if necessary.
+ */
+void bcast_partitioning(int read_key, int myrank, int **partitioning_map, int *nintci_g, int *nintcf_g,
+        int *nextci_g, int *nextcf_g);
 
 #endif /* INITIALIZATION_ALGORITHMS_H_ */

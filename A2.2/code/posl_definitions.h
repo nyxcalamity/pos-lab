@@ -18,11 +18,16 @@
 #define POSL_MPI_TAG_NINTCF         0
 #define POSL_MPI_TAG_NEXTCF         1
 #define POSL_MPI_TAG_POINTS_COUNT   2
+#define POSL_MPI_TAG_LCC            3
+#define POSL_MPI_TAG_POINTS         99
+#define POSL_MPI_TAG_ELEMENTS       100
 
 //debug definitions
 #define OUTPUT_LCC_G                0
 #define OUTPUT_LCC                  0
 #define OUTPUT_NINTCF_NINTCE        0
 #define OUTPUT_VTK                  1
+#define DEBUG_OUTPUT_L2G_G          1
+#define DEBUG_OUTPUT_PARTITIONING   1
 
 #endif

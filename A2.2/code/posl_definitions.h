@@ -29,7 +29,7 @@
 #define VTK_ALL                     1
 #define VTK_SEND_LST                2
 #define VTK_RECV_LST                3
-
+#define VTK_NEIGHBOUR               1
 
 
 

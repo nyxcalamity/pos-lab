@@ -165,6 +165,10 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
                 *local_global_index, (*nintcf-*nintci+1),
                 *nghb_cnt, *nghb_to_rank, *send_cnt, *send_lst,
                 *recv_cnt, *recv_lst, OUTPUT_VTK);
+        vtk_check_neighbour(file_in, myrank,
+                        *local_global_index, (*nintcf-*nintci+1),
+                        *nghb_cnt, *nghb_to_rank, *send_cnt, *send_lst,
+                        *recv_cnt, *recv_lst, OUTPUT_VTK, VTK_NEIGHBOUR);
 //        FIXME: delete
 //        char szFileName[80];
 //        sprintf(szFileName, "%s%s.receive.rank%i.vtk", "out/", "test", myrank);

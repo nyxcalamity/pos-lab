@@ -342,14 +342,14 @@ int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nin
 
                 //fill in buffer data
                 for (i=0; i<int_cells_per_proc[proc]; ++i) {
-                    memcpy(&(buf_bs[i]), &(*bs_g)[local_global_index_g[proc][i]], sizeof(double));
-                    memcpy(&(buf_be[i]), &(*be_g)[local_global_index_g[proc][i]], sizeof(double));
-                    memcpy(&(buf_bn[i]), &(*bn_g)[local_global_index_g[proc][i]], sizeof(double));
-                    memcpy(&(buf_bw[i]), &(*bw_g)[local_global_index_g[proc][i]], sizeof(double));
-                    memcpy(&(buf_bl[i]), &(*bl_g)[local_global_index_g[proc][i]], sizeof(double));
-                    memcpy(&(buf_bh[i]), &(*bh_g)[local_global_index_g[proc][i]], sizeof(double));
-                    memcpy(&(buf_bp[i]), &(*bp_g)[local_global_index_g[proc][i]], sizeof(double));
-                    memcpy(&(buf_su[i]), &(*su_g)[local_global_index_g[proc][i]], sizeof(double));
+                    buf_bs[i] = (*bs_g)[local_global_index_g[proc][i]];
+                    buf_be[i] = (*be_g)[local_global_index_g[proc][i]];
+                    buf_bn[i] = (*bn_g)[local_global_index_g[proc][i]];
+                    buf_bw[i] = (*bw_g)[local_global_index_g[proc][i]];
+                    buf_bl[i] = (*bl_g)[local_global_index_g[proc][i]];
+                    buf_bh[i] = (*bh_g)[local_global_index_g[proc][i]];
+                    buf_bp[i] = (*bp_g)[local_global_index_g[proc][i]];
+                    buf_su[i] = (*su_g)[local_global_index_g[proc][i]];
                 }
                 
                 //send the data

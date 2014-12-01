@@ -93,4 +93,11 @@ void exchange_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** send_cn
 void bcast_partitioning(int read_key, int myrank, int **partitioning_map, int *nintci_g, int *nintcf_g,
         int *nextci_g, int *nextcf_g);
 
+
+/**
+ * Parses lcc and communication lists in order to replace global cells indexes to local ones.
+ */
+void converte_global2local_idx(int myrank, int *g2l, int nintci, int nintcf, int **lcc, 
+        int ngbh_cnt, int *send_cnt, int **send_lst, int *recv_cnt, int **recv_lst);
+
 #endif /* INITIALIZATION_ALGORITHMS_H_ */

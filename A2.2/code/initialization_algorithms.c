@@ -642,3 +642,27 @@ void exchange_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** send_cn
         MPI_Wait(&request_recv[nghb_idx], &status);
     }
 }
+
+
+void converte_global2local_idx(int myrank, int *g2l, int nintci, int nintcf, int **lcc, 
+        int ngbh_cnt, int *send_cnt, int **send_lst, int *recv_cnt, int **recv_lst) {
+    int i=0, j=0, ngbh_idx=0;
+    
+    // convert lcc
+    for (i=0; i<=nintcf; ++i) {
+        for (j=0; j<6; ++j) {
+            lcc[i][j] = g2l[lcc[i][j]];
+        }
+    }
+    
+    // convert communication lists
+    for (ngbh_idx=0; ngbh_idx<ngbh_cnt; ++ngbh_idx) {
+        for (i=0; i<send_cnt[ngbh_idx]; ++i) {
+            send_lst[ngbh_idx][i] = g2l[send_lst[ngbh_idx][i]];
+        }
+        
+        for (i=0; i<recv_cnt[ngbh_idx]; ++i) {
+            recv_lst[ngbh_idx][i] = g2l[recv_lst[ngbh_idx][i]];
+        }
+    }
+}

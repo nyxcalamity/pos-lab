@@ -229,6 +229,10 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     if (f_status != 0){
         return f_status;
     }
+    
+    //convert global indexes
+    converte_global2local_idx(myrank, *global_local_index, *nintci, *nintcf, *lcc, *nghb_cnt,
+            *send_cnt, *send_lst, *recv_cnt, *recv_lst);
 
     // Free
     //FIXME:code proper memory freeing

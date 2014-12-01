@@ -236,7 +236,7 @@ int fill_lcc_elems_points(int read_key, int myrank, int nprocs, int nintci, int 
                 free(buff);
             }
         } else {
-            for (i=nintci; i<nintcf; ++i) {
+            for (i=nintci; i<nintcf+1; ++i) {
                 MPI_Recv(lcc[i], 6, MPI_INT, 0, POSL_MPI_TAG_LCC, MPI_COMM_WORLD, &status);
             }
             for (i=0; i<points_count; i++) {
@@ -583,7 +583,7 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
 //    printf("r%d, start_idx_per_proc[0]=%d, start_idx_per_proc[1]=%d, start_idx_per_proc[2]=%d, start_idx_per_proc[3]=%d\n",
 //            myrank, start_idx_per_proc[0], start_idx_per_proc[1], start_idx_per_proc[2], start_idx_per_proc[3]);
 //TODO:    printf("r%d, nghb_cnt=%d\n", myrank, (*nghb_cnt));
-//TODO:    printf("r%d, nghb_to_rank[0]=%d, nghb_to_rank[1]=%d, nghb_to_rank[2]=%d, nghb_to_rank[3]=%d, nghb_to_rank[4]=%d\n",
+//      printf("r%d, nghb_to_rank[0]=%d, nghb_to_rank[1]=%d, nghb_to_rank[2]=%d, nghb_to_rank[3]=%d, nghb_to_rank[4]=%d\n",
 //            myrank, (*nghb_to_rank)[0], (*nghb_to_rank)[1], (*nghb_to_rank)[2], (*nghb_to_rank)[3], (*nghb_to_rank)[3]);
 
     // Total number of external cells

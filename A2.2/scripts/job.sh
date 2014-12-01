@@ -25,5 +25,6 @@ echo "Statistics output"
 echo "============================================================================================="
 mpiexec -n 9 ./gccg ./data/drall.geo.bin classic allread
 mpiexec -n 9 ./gccg ./data/cojack.geo.bin classic allread
-#mpiexec -n 9 ./gccg ./data/drall.geo.bin dual oneread
-#mpiexec -n 9 ./gccg ./data/cojack.geo.bin dual oneread
+
+mpiexec -n 9 ./gccg ./data/drall.geo.bin dual oneread
+mpiexec -n 9 ./gccg ./data/cojack.geo.bin dual oneread

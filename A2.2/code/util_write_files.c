@@ -415,7 +415,7 @@ void vtk_check_neighbour(char *file_in, int myrank,
     } else if(output_style == VTK_RECV_LST) {
         sprintf(szFileName, "%s%s.Recv.rank%i.neighbour%d.vtk", kOutputDirectoryName, data_file, myrank, neighbour);
     } else {
-        sprintf(szFileName, "%s%s.RecvandSend.neighbour%d.rank%i.vtk", kOutputDirectoryName, data_file, myrank, neighbour);
+        sprintf(szFileName, "%s%s.RecvandSend.rank%d.neighbour%i.vtk", kOutputDirectoryName, data_file, myrank, neighbour);
     }
 
 

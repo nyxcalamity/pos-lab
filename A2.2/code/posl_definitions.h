@@ -30,10 +30,11 @@
 #define DEBUG_OUTPUT_PARTITIONING   0
         
 // VTK output definitions
-#define OUTPUT_VTK                  VTK_RECV_LST
+#define OUTPUT_VTK                  2
 #define VTK_ALL                     1
 #define VTK_SEND_LST                2
 #define VTK_RECV_LST                3
+
 #define VTK_NEIGHBOUR               1
 
 #endif

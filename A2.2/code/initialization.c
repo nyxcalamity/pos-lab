@@ -252,8 +252,9 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     }
     printf("[INFO] Completed initialization on task #%d\n", myrank);
     /********** END INITIALIZATION **********/
-    //FIXME:which neighbour index should be there?
-//    write_pstats_communication(input_key, part_key, myrank, nprocs, *nghb_cnt, 1, 
-//            *send_cnt, *send_lst, *recv_cnt, *recv_lst);
+    for (i=0; i<*nghb_cnt; ++i) {
+        write_pstats_communication(input_key, part_key, myrank, nprocs, *nghb_cnt, i, 
+                *send_cnt, *send_lst, *recv_cnt, *recv_lst);
+    }
     return 0;
 }

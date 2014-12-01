@@ -366,6 +366,7 @@ int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nin
                 
                 //free buffer memory
                 free(buf_bs);
+                free(buf_be);
                 free(buf_bn);
                 free(buf_bw);
                 free(buf_bl);

@@ -8,12 +8,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <mpi.h>
 
 int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, int** lcc, double* bp,
                      double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
                      double* cnorm, double* var, double *su, double* cgup, double* residual_ratio,
                      int* local_global_index, int* global_local_index, int nghb_cnt, 
                      int* nghb_to_rank, int* send_cnt, int** send_lst, int *recv_cnt, int** recv_lst){
+    MPI_Status status;
+    MPI_Request request_send[nghb_cnt], request_recv[nghb_cnt];
+    /** buffers used to resend direc1 */
+    int nghb_idx=0;
+    double *send_buff[nghb_cnt];
+    double *recv_buff[nghb_cnt];
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        if ((send_buff[nghb_idx] = (double *) malloc(send_cnt[nghb_idx]*sizeof(double))) == NULL) {
+            fprintf(stderr, "malloc(send_buff) failed\n");
+            MPI_Abort(MPI_COMM_WORLD, myrank);
+            return -1;
+        }
+        // TODO: in 4th milestone try not to use buffer but save it directly in direc1 array
+        if ((recv_buff[nghb_idx] = (double *) malloc(recv_cnt[nghb_idx]*sizeof(double))) == NULL) {
+            fprintf(stderr, "malloc(recv_buff) failed\n");
+            MPI_Abort(MPI_COMM_WORLD, myrank);
+            return -1;
+        }
+    }
+
     /** parameters used in gccg */
     int iter = 1;
     int if1 = 0;
@@ -24,6 +45,7 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     int nomax = 3;
 
     /** the reference residual */
+    double resref_g = 0.0;
     double resref = 0.0;
 
     /** array storing residuals */
@@ -35,10 +57,15 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         resref = resref + resvec[nc] * resvec[nc];
     }
 
-    resref = sqrt(resref);
-    if ( resref < 1.0e-15 ) {
-        fprintf(stderr, "Residue sum less than 1.e-15 - %lf\n", resref);
-        return 0;
+    // Exchange resref
+    MPI_Allreduce(&resref, &resref_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    resref_g = sqrt(resref_g);
+    if (myrank == 0) {
+        if ( resref_g < 1.0e-15 ) {
+            fprintf(stderr, "Residue sum less than 1.e-15 - %lf\n", resref_g);
+            MPI_Abort(MPI_COMM_WORLD, myrank);
+            return 0;
+        }
     }
 
     /** the computation vectors */
@@ -55,7 +82,31 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         for ( nc = nintci; nc <= nintcf; nc++ ) {
             direc1[nc] = direc1[nc] + resvec[nc] * cgup[nc];
         }
-
+        /** START Exchange of direc1 with MPI **/
+        for(nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+            // Fill send_buff
+            for(nc=0; nc<send_cnt[nghb_idx]; ++nc) {
+                send_buff[nghb_idx][nc] = direc1[send_lst[nghb_idx][nc]];
+            }
+            // Send direc1
+            MPI_Isend(send_buff[nghb_idx], send_cnt[nghb_idx], MPI_DOUBLE, nghb_to_rank[nghb_idx],
+                    myrank, MPI_COMM_WORLD, &request_send[nghb_idx]);
+            // Receive direc1
+            MPI_Irecv(recv_buff[nghb_idx], recv_cnt[nghb_idx], MPI_DOUBLE, nghb_to_rank[nghb_idx],
+                    nghb_to_rank[nghb_idx], MPI_COMM_WORLD, &request_recv[nghb_idx]);
+        }
+        // Synchronize everything
+        for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+            MPI_Wait(&request_send[nghb_idx], &status);
+            MPI_Wait(&request_recv[nghb_idx], &status);
+        }
+        // Save received data for further use
+        for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+            for(nc=0; nc<send_cnt[nghb_idx]; ++nc) {
+                direc1[recv_lst[nghb_idx][nc]] = recv_buff[nghb_idx][nc];
+            }
+        }
+        /** STOP Exchange of direc1 with MPI **/
         // compute new guess (approximation) for direc
         for ( nc = nintci; nc <= nintcf; nc++ ) {
             direc2[nc] = bp[nc] * direc1[nc] - bs[nc] * direc1[lcc[nc][0]]
@@ -119,14 +170,16 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
 
         omega = omega / cnorm[nor];
         double res_updated = 0.0;
+        double res_updated_g = 0.0;
         for ( nc = nintci; nc <= nintcf; nc++ ) {
             resvec[nc] = resvec[nc] - omega * direc2[nc];
             res_updated = res_updated + resvec[nc] * resvec[nc];
             var[nc] = var[nc] + omega * direc1[nc];
         }
 
-        res_updated = sqrt(res_updated);
-        *residual_ratio = res_updated / resref;
+        MPI_Allreduce(&res_updated, &res_updated_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        res_updated_g = sqrt(res_updated_g);
+        *residual_ratio = res_updated_g / resref_g;
 
         // exit on no improvements of residual
         if ( *residual_ratio <= 1.0e-10 ) break;

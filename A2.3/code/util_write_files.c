@@ -225,7 +225,7 @@ void vtk_for_process(const char *file_in, const char *file_vtk_out, int nintci, 
 
 
 //TODO:include all execution setup identifiers in the file name
-int vtk_check(char *file_in, int myrank, int nintci, int nintcf, double *su, double *cgup, 
+int vtk_check(char *file_in, int myrank, int nintci, int nintcf, double *resvec, double *direc1, double *direc2, double *var,
         int points_count, int **points,  int *elems, int *local_global_index, int local_num_elems) {
     char szFileName[80];
     int i=0;
@@ -242,23 +242,41 @@ int vtk_check(char *file_in, int myrank, int nintci, int nintcf, double *su, dou
         fprintf(stderr, "malloc(local_global_index) failed\n");
         return -1;
     }
+    // Output resvec
     for (i=0; i<local_num_elems; i++){
-        scalars[i] = cgup[i];
+        scalars[i] = resvec[i];
     }
-    // Output CGUP
-    sprintf(szFileName, "%s%s.cgup.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
+    sprintf(szFileName, "%s%s.resvec.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
     test_distribution(file_in, szFileName, local_global_index, local_num_elems, scalars);
-    sprintf(szFileName, "%s%s.cgup.cutted.rank%i.vtk", kOutputDirectoryName,data_file, myrank);
+    sprintf(szFileName, "%s%s.resvec.cutted.rank%i.vtk", kOutputDirectoryName,data_file, myrank);
+    vtk_for_process(file_in, szFileName, 0, local_num_elems-1, points_count, points, elems,
+            local_global_index, local_num_elems, scalars);
+    // Output CGUP
+    for (i=0; i<local_num_elems; i++){
+        scalars[i] = direc2[i];
+    }
+    sprintf(szFileName, "%s%s.direc2.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
+    test_distribution(file_in, szFileName, local_global_index, local_num_elems, scalars);
+    sprintf(szFileName, "%s%s.direc2.cutted.rank%i.vtk", kOutputDirectoryName,data_file, myrank);
     vtk_for_process(file_in, szFileName, 0, local_num_elems-1, points_count, points, elems, 
             local_global_index, local_num_elems, scalars);
     // Output SU
     for (i=0; i<local_num_elems; i++){
-        scalars[i] = su[i];
+        scalars[i] = direc1[i];
     }
-    sprintf(szFileName, "%s%s.su.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
+    sprintf(szFileName, "%s%s.direc1.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
     test_distribution(file_in, szFileName, local_global_index, local_num_elems, scalars);
-    sprintf(szFileName, "%s%s.su.cutted.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
+    sprintf(szFileName, "%s%s.direc1.cutted.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
     vtk_for_process(file_in, szFileName, 0, local_num_elems-1, points_count, points, elems, 
+            local_global_index, local_num_elems, scalars);
+    // Output VAR
+    for (i=0; i<local_num_elems; i++){
+        scalars[i] = var[i];
+    }
+    sprintf(szFileName, "%s%s.var.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
+    test_distribution(file_in, szFileName, local_global_index, local_num_elems, scalars);
+    sprintf(szFileName, "%s%s.var.cutted.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
+    vtk_for_process(file_in, szFileName, 0, local_num_elems-1, points_count, points, elems,
             local_global_index, local_num_elems, scalars);
     free(data_file);
     return 0;

@@ -79,7 +79,7 @@ void vtk_for_process(const char *file_in, const char *file_vtk_out,
 
 
 int vtk_check(char *file_in, int myrank,
-        int nintci, int nintcf, double *su, double *cgup,
+        int nintci, int nintcf, double *resvec, double *direc1, double *direc2, double *var,
 		int points_count, int **points,  int *elems,
 		int *local_global_index, int local_num_elems);
 

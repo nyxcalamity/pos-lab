@@ -106,12 +106,13 @@ int main(int argc, char *argv[]) {
     /********** END INITIALIZATION **********/
 
     /********** START COMPUTATIONAL LOOP **********/
+    //FIXME: delete file_in, points_count, pointes, elems, as arguments
     int total_iters = compute_solution(num_procs, my_rank, max_iters, nintci, nintcf, nextcf, 
                     lcc, bp, bs, bw, bl, bn, be, bh,
                      cnorm, var, su, cgup, &residual_ratio,
                      local_global_index, global_local_index, nghb_cnt, 
-                     nghb_to_rank, send_cnt, send_lst, recv_cnt, recv_lst);
-
+                     nghb_to_rank, send_cnt, send_lst, recv_cnt, recv_lst,
+                     file_in, points_count, points, elems);
     /********** END COMPUTATIONAL LOOP **********/
 
     /********** START FINALIZATION **********/

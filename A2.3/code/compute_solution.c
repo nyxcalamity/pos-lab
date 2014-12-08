@@ -14,7 +14,8 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
                      double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
                      double* cnorm, double* var, double *su, double* cgup, double* residual_ratio,
                      int* local_global_index, int* global_local_index, int nghb_cnt, 
-                     int* nghb_to_rank, int* send_cnt, int** send_lst, int *recv_cnt, int** recv_lst){
+                     int* nghb_to_rank, int* send_cnt, int** send_lst, int *recv_cnt, int** recv_lst,
+                     char *file_in, int points_count, int **points, int *elems) {
     MPI_Status status;
     MPI_Request request_send[nghb_cnt], request_recv[nghb_cnt];
     /** buffers used to resend direc1 */
@@ -59,7 +60,8 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
 
     // Exchange resref
     MPI_Allreduce(&resref, &resref_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    resref_g = sqrt(resref_g);
+    resref=resref_g;
+    resref = sqrt(resref);
     if (myrank == 0) {
         if ( resref_g < 1.0e-15 ) {
             fprintf(stderr, "Residue sum less than 1.e-15 - %lf\n", resref_g);
@@ -77,9 +79,15 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     double *dxor2 = (double *) calloc(sizeof(double), (nintcf + 1));
 
     while ( iter < max_iters ) {
+//        if (iter==max_iters-1) {
+//            vtk_check(file_in, myrank, nintci, nintcf, resvec, direc1, direc2, var, points_count, points,
+//                            elems, local_global_index, (nintcf-nintci+1));
+//        }
         /**********  START COMP PHASE 1 **********/
         // update the old values of direc
         for ( nc = nintci; nc <= nintcf; nc++ ) {
+//            if(local_global_index[nc]==36507)
+//                printf("direc1=%.15lf,resvec=%.15lf,cgup=%.15lf\n",direc1[nc],resvec[nc],cgup[nc]);
             direc1[nc] = direc1[nc] + resvec[nc] * cgup[nc];
         }
         /** START Exchange of direc1 with MPI **/
@@ -109,6 +117,8 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         /** STOP Exchange of direc1 with MPI **/
         // compute new guess (approximation) for direc
         for ( nc = nintci; nc <= nintcf; nc++ ) {
+//            if(local_global_index[nc]==36507)
+//                printf("direc2=%.15lf,resvec=%.15lf,cgup=%.15lf\n",direc2[nc],resvec[nc],cgup[nc]);
             direc2[nc] = bp[nc] * direc1[nc] - bs[nc] * direc1[lcc[nc][0]]
                          - be[nc] * direc1[lcc[nc][1]] - bn[nc] * direc1[lcc[nc][2]]
                          - bw[nc] * direc1[lcc[nc][3]] - bl[nc] * direc1[lcc[nc][4]]
@@ -119,13 +129,17 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         /********** START COMP PHASE 2 **********/
         // execute normalization steps
         double oc1, oc2, occ;
+        double occ_g;
         if ( nor1 == 1 ) {
             oc1 = 0;
             occ = 0;
+            occ_g=0;
 
             for ( nc = nintci; nc <= nintcf; nc++ ) {
                 occ = occ + direc2[nc] * adxor1[nc];
             }
+            MPI_Allreduce(&occ, &occ_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            occ = occ_g;
 
             oc1 = occ / cnorm[1];
             for ( nc = nintci; nc <= nintcf; nc++ ) {
@@ -138,17 +152,23 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
             if ( nor1 == 2 ) {
                 oc1 = 0;
                 occ = 0;
+                occ_g=0;
 
                 for ( nc = nintci; nc <= nintcf; nc++ ) {
                     occ = occ + direc2[nc] * adxor1[nc];
                 }
+                MPI_Allreduce(&occ, &occ_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                occ = occ_g;
 
                 oc1 = occ / cnorm[1];
                 oc2 = 0;
                 occ = 0;
+                occ_g=0;
                 for ( nc = nintci; nc <= nintcf; nc++ ) {
                     occ = occ + direc2[nc] * adxor2[nc];
                 }
+                MPI_Allreduce(&occ, &occ_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                occ = occ_g;
 
                 oc2 = occ / cnorm[2];
                 for ( nc = nintci; nc <= nintcf; nc++ ) {
@@ -159,15 +179,24 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
                 if2++;
             }
         }
+//        printf("i%d,r%d,occ=%.15lf\n",iter,myrank,occ);
 
         // compute the new residual
         cnorm[nor] = 0;
         double omega = 0;
+        double omega_g = 0;
+        double cnorm_g = 0;
         for ( nc = nintci; nc <= nintcf; nc++ ) {
             cnorm[nor] = cnorm[nor] + direc2[nc] * direc2[nc];
             omega = omega + resvec[nc] * direc2[nc];
         }
+        MPI_Allreduce(&cnorm[nor], &cnorm_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        cnorm[nor] = cnorm_g;
 
+        MPI_Allreduce(&omega, &omega_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+//        printf("r%d, omega_g=%.20lf\n",myrank, omega_g);
+//        printf("r%d, cnorm[nor]=%.20lf\n",myrank, cnorm[nor]);
+        omega = omega_g;
         omega = omega / cnorm[nor];
         double res_updated = 0.0;
         double res_updated_g = 0.0;
@@ -176,10 +205,11 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
             res_updated = res_updated + resvec[nc] * resvec[nc];
             var[nc] = var[nc] + omega * direc1[nc];
         }
-
+//        printf("r%d, omega=%.20lf\n",myrank, omega);
         MPI_Allreduce(&res_updated, &res_updated_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        res_updated_g = sqrt(res_updated_g);
-        *residual_ratio = res_updated_g / resref_g;
+        res_updated = res_updated_g;
+        res_updated = sqrt(res_updated);
+        *residual_ratio = res_updated / resref;
 
         // exit on no improvements of residual
         if ( *residual_ratio <= 1.0e-10 ) break;
@@ -209,6 +239,8 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         nor1 = nor - 1;
         /********** END COMP PHASE 2 **********/
     }
+    vtk_check(file_in, myrank, nintci, nintcf, resvec, direc1, direc2, var, points_count, points,
+                    elems, local_global_index, (nintcf-nintci+1));
 
     free(direc1);
     free(direc2);

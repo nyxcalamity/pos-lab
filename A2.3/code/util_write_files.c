@@ -439,4 +439,224 @@ void vtk_check_neighbour(char *file_in, int myrank,
 
     test_distribution(file_in, szFileName, local_global_index_big, local_num_elems_big, scalars);
 }
+
+
+int output_lcc(char* file_suffix, int myrank, int nintcf, int** lcc) {
+    int i=0;
+    char file_out[100];
+    char out_folder[]="output";
+    sprintf(file_out, "./%s/%s.%s",out_folder, "lcc", file_suffix);
+    FILE *fp = fopen(file_out, "w");
+    if ( fp == NULL ) {
+        fprintf(stderr, "Error opening file %s for writing\n", file_out);
+        return -1;
+    }
+    for (i=0; i<=nintcf; ++i) {
+        fprintf(fp,"%-10d %-10d %-10d %-10d %-10d %-10d\n",
+                lcc[i][0],lcc[i][1],lcc[i][2],lcc[i][3],lcc[i][4],lcc[i][5]);
+    }
+    fclose(fp);
+    return 0;
+}
+int ouput_b(char*file_suffix, int myrank, int nextcf, double *b_, char *b_name) {
+    int i=0;
+    char file_out[100];
+    char out_folder[]="output";
+    sprintf(file_out, "./%s/%s.%s",out_folder, b_name, file_suffix);
+    FILE *fp = fopen(file_out, "w");
+    if ( fp == NULL ) {
+        fprintf(stderr, "Error opening file %s for writing\n", file_out);
+        return -1;
+    }
+    for (i=0; i<=nextcf; ++i) {
+        fprintf(fp,"%.15lf\n",  b_[i]);
+    }
+    fclose(fp);
+    return 0;
+}
+int ouput_l2g_g2l(char* file_suffix, int myrank, int nelems, int* map, char* map_name) {
+    int i=0;
+    char file_out[100];
+    char out_folder[]="output";
+    sprintf(file_out, "./%s/%s.%s",out_folder, map_name, file_suffix);
+    FILE *fp = fopen(file_out, "w");
+    if ( fp == NULL ) {
+        fprintf(stderr, "Error opening file %s for writing\n", file_out);
+        return -1;
+    }
+    for (i=0; i<nelems; ++i) {
+        fprintf(fp,"%d\n",  map[i]);
+    }
+    fclose(fp);
+    return 0;
+}
+int write_lists(char* file_suffix, int myrank, int nghb_cnt, int *list_cnt, int** list, char *list_name) {
+    int nghb_idx=0;
+    int i=0;
+    char file_out[100];
+    char out_folder[]="output";
+    sprintf(file_out, "./%s/%s.%s",out_folder, list_name, file_suffix);
+    FILE *fp = fopen(file_out, "w");
+    if ( fp == NULL ) {
+        fprintf(stderr, "Error opening file %s for writing\n", file_out);
+        return -1;
+    }
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        fprintf(fp,"%d\n\n",  list_cnt[nghb_idx]);
+        for (i=0; i<list_cnt[nghb_idx]; ++i) {
+            fprintf(fp, "%d\n", list[nghb_idx][i]);
+        }
+        fprintf(fp, "\n");
+    }
+    fclose(fp);
+    return 0;
+}
+
+int check_compute_arguments(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, int** lcc, double* bp,
+                     double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
+                     double* cnorm, double* var, double *su, double* cgup, double* residual_ratio,
+                     int* local_global_index, int* global_local_index, int nghb_cnt,
+                     int* nghb_to_rank, int* send_cnt, int** send_lst, int *recv_cnt, int** recv_lst,
+                     char *file_in, int points_count, int **points, int *elems, char* part_type, char* read_type){
+    int nghb_idx = 0;
+    char file_out[100];
+    char file_suffix[100];
+    char out_folder[]="output";
+    //find base file name
+    char *data_file = strrchr(file_in,'/')+1;
+    //strip data file base name
+    data_file = strndup(data_file, strchr(data_file, '.')-data_file);
+    sprintf(file_suffix, "%s.%s-%s.%d.out",data_file,part_type,read_type,myrank);
+    sprintf(file_out,"./%s/%s", out_folder, file_suffix);
+    FILE *fp = fopen(file_out, "w");
+    if ( fp == NULL ) {
+        fprintf(stderr, "Error opening file %s for writing\n", file_out);
+        return -1;
+    }
+    // Write data
+    fprintf(fp, "nprocs=%d\n", nprocs);
+    fprintf(fp, "nintci=%d, nintcf=%d, nextcf=%d\n",nintci,nintcf,nextcf);
+    fprintf(fp, "nghb_cnt=%d\n", nghb_cnt);
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        fprintf(fp, "nghb_to_rank[%d]=%d", nghb_idx, nghb_to_rank[nghb_idx]);
+    }
+    fprintf(fp, "\n");
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        fprintf(fp, "send_cnt[%d]=%d", nghb_idx, send_cnt[nghb_idx]);
+    }
+    fprintf(fp, "\n");
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        fprintf(fp, "recv_cnt[%d]=%d", nghb_idx, recv_cnt[nghb_idx]);
+    }
+    fprintf(fp, "\n");
+
+    output_lcc(file_suffix, myrank, nintcf, lcc);
+
+    ouput_b(file_suffix, myrank, nextcf, bp, "bp");
+    ouput_b(file_suffix, myrank, nextcf, bs, "bs");
+    ouput_b(file_suffix, myrank, nextcf, bw, "bw");
+    ouput_b(file_suffix, myrank, nextcf, bl, "bl");
+    ouput_b(file_suffix, myrank, nextcf, bn, "bn");
+    ouput_b(file_suffix, myrank, nextcf, be, "be");
+    ouput_b(file_suffix, myrank, nextcf, bh, "bh");
+    ouput_b(file_suffix, myrank, nextcf, su, "su");
+
+    ouput_b(file_suffix, myrank, nintcf, cnorm, "cnorm");
+    ouput_b(file_suffix, myrank, nextcf, var, "var");
+    ouput_b(file_suffix, myrank, nextcf, cgup, "cgup");
+
+    ouput_l2g_g2l(file_suffix, myrank, nintcf+1, local_global_index, "l2g");
+    ouput_l2g_g2l(file_suffix, myrank, nextcf+1, global_local_index, "g2l");
+
+    write_lists(file_suffix, myrank, nghb_cnt, send_cnt, send_lst, "send");
+    write_lists(file_suffix, myrank, nghb_cnt, recv_cnt, recv_lst, "recv");
+    fclose(fp);
+    return 0;
+}
+
+int check_compute_values(char *file_in, char* part_type, char* read_type, int nprocs, int myrank,
+        int nintci, int nintcf, int nextcf,
+        double *resvec, double *direc1, double *direc2, double *var,double* cnorm) {
+    char file_suffix[100];
+    //find base file name
+    char *data_file = strrchr(file_in,'/')+1;
+    //strip data file base name
+    data_file = strndup(data_file, strchr(data_file, '.')-data_file);
+    sprintf(file_suffix, "%s.%s-%s.%d.out",data_file,part_type,read_type,myrank);
+    ouput_b(file_suffix, myrank, nextcf, direc1, "direc1");
+    ouput_b(file_suffix, myrank, nextcf, direc2, "direc2");
+    ouput_b(file_suffix, myrank, nintcf, resvec, "resvec");
+    ouput_b(file_suffix, myrank, nintcf, cnorm, "cnorm");
+    ouput_b(file_suffix, myrank, nextcf, var, "var");
+    return 0;
+}
+
+int check_initialization_values(char* file_in, char* part_type, char* read_type, int nprocs, int myrank,
+        int nintci_g, int nintcf_g, int nextci_g, int nextcf_g, int** lcc_g,
+        int nintci, int nintcf, int nextci, int nextcf, int** lcc,
+        double* bs, double* be, double* bn, double* bw, double* bl, double* bh, double* bp, double* su,
+        int* points_count, int** points, int* elems,
+        double* var, double* cgup, double* oc, double* cnorm,
+        int* local_global_index, int* global_local_index,
+        int nghb_cnt, int* nghb_to_rank,
+        int* send_cnt, int** send_lst,  int *recv_cnt, int** recv_lst,
+        int *partitioning_map, int write_me) {
+    if(myrank==0) {
+        printf("!!!!!!!!!!!!!!!lcc[35995][0]=%d\n", lcc[35995][1]);
+    }
+    int nghb_idx = 0;
+    char file_out[100];
+    char file_suffix[100];
+    char out_folder[]="output";
+    //find base file name
+    char *data_file = strrchr(file_in,'/')+1;
+    //strip data file base name
+    data_file = strndup(data_file, strchr(data_file, '.')-data_file);
+    sprintf(file_suffix, "%s.%s-%s.%d.out",data_file,part_type,read_type,myrank);
+    sprintf(file_out,"./%s/%s", out_folder, file_suffix);
+    FILE *fp = fopen(file_out, "w");
+    if ( fp == NULL ) {
+        fprintf(stderr, "Error opening file %s for writing\n", file_out);
+        return -1;
+    }
+    fprintf(fp, "nprocs=%d\n", nprocs);
+    switch(write_me) {
+      case 5: {
+        ouput_b(file_suffix, myrank, nextcf, bp, "bp");
+        ouput_b(file_suffix, myrank, nextcf, bs, "bs");
+        ouput_b(file_suffix, myrank, nextcf, bw, "bw");
+        ouput_b(file_suffix, myrank, nextcf, bl, "bl");
+        ouput_b(file_suffix, myrank, nextcf, bn, "bn");
+        ouput_b(file_suffix, myrank, nextcf, be, "be");
+        ouput_b(file_suffix, myrank, nextcf, bh, "bh");
+        ouput_b(file_suffix, myrank, nextcf, su, "su");
+
+        write_lists(file_suffix, myrank, nghb_cnt, send_cnt, send_lst, "send");
+        write_lists(file_suffix, myrank, nghb_cnt, recv_cnt, recv_lst, "recv");
+      }
+      case 4: {
+        ouput_l2g_g2l(file_suffix, myrank, nextcf_g+1, global_local_index, "g2l");
+      }
+      case 3: {
+        output_lcc(file_suffix, myrank, nintcf, lcc);
+        ouput_l2g_g2l(file_suffix, myrank, nintcf+1, local_global_index, "l2g");
+      }
+      case 2: {
+        ouput_l2g_g2l(file_suffix, myrank, nintcf_g+1, partitioning_map, "partitioning");
+      }
+      case 1: {
+        fprintf(fp, "nintci_g=%d, nintcf_g=%d, nextci_g=%d, nextcf_g=%d\n",nintci_g,nintcf_g,nextci_g,nextcf_g);
+        fprintf(fp, "nintci=%d, nintcf=%d, nextci=%d, nextcf=%d\n",nintci,nintcf,nextci,nextcf);
+        fprintf(fp, "nghb_cnt=%d\n", nghb_cnt);
+        for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+            fprintf(fp, "nghb_to_rank[%d]=%d", nghb_idx, nghb_to_rank[nghb_idx]);
+        }
+        fprintf(fp, "\n");
+      }
+      default:
+        break;
+    }
+    fclose(fp);
+    return 0;
+}
 // end_of_student_code-----------------------------------------------------------------------------------

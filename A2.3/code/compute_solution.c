@@ -10,12 +10,21 @@
 #include <math.h>
 #include <mpi.h>
 
+// FIXME: delete next line
+#include "util_write_files.h"
+
 int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, int** lcc, double* bp,
                      double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
                      double* cnorm, double* var, double *su, double* cgup, double* residual_ratio,
                      int* local_global_index, int* global_local_index, int nghb_cnt, 
                      int* nghb_to_rank, int* send_cnt, int** send_lst, int *recv_cnt, int** recv_lst,
-                     char *file_in, int points_count, int **points, int *elems) {
+                     char *file_in, int points_count, int **points, int *elems, char* part_type, char* read_type) {
+//    check_compute_arguments(nprocs, myrank, max_iters, nintci, nintcf, nextcf,
+//                        lcc, bp, bs, bw, bl, bn, be, bh,
+//                         cnorm, var, su, cgup, residual_ratio,
+//                         local_global_index, global_local_index, nghb_cnt,
+//                         nghb_to_rank, send_cnt, send_lst, recv_cnt, recv_lst,
+//                         file_in, points_count, points, elems, part_type, read_type);
     MPI_Status status;
     MPI_Request request_send[nghb_cnt], request_recv[nghb_cnt];
     /** buffers used to resend direc1 */
@@ -63,8 +72,8 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     resref=resref_g;
     resref = sqrt(resref);
     if (myrank == 0) {
-        if ( resref_g < 1.0e-15 ) {
-            fprintf(stderr, "Residue sum less than 1.e-15 - %lf\n", resref_g);
+        if ( resref < 1.0e-15 ) {
+            fprintf(stderr, "Residue sum less than 1.e-15 - %lf\n", resref);
             MPI_Abort(MPI_COMM_WORLD, myrank);
             return 0;
         }
@@ -80,8 +89,9 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
 
     while ( iter < max_iters ) {
 //        if (iter==max_iters-1) {
-//            vtk_check(file_in, myrank, nintci, nintcf, resvec, direc1, direc2, var, points_count, points,
-//                            elems, local_global_index, (nintcf-nintci+1));
+//            check_compute_values(file_in, part_type, read_type, nprocs, myrank,
+//                    nintci, nintcf, nextcf,
+//                    resvec, direc1, direc2, var, cnorm);
 //        }
         /**********  START COMP PHASE 1 **********/
         // update the old values of direc
@@ -92,6 +102,9 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         }
         /** START Exchange of direc1 with MPI **/
         for(nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+            // Receive direc1
+            MPI_Irecv(recv_buff[nghb_idx], recv_cnt[nghb_idx], MPI_DOUBLE, nghb_to_rank[nghb_idx],
+                    nghb_to_rank[nghb_idx], MPI_COMM_WORLD, &request_recv[nghb_idx]);
             // Fill send_buff
             for(nc=0; nc<send_cnt[nghb_idx]; ++nc) {
                 send_buff[nghb_idx][nc] = direc1[send_lst[nghb_idx][nc]];
@@ -99,21 +112,23 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
             // Send direc1
             MPI_Isend(send_buff[nghb_idx], send_cnt[nghb_idx], MPI_DOUBLE, nghb_to_rank[nghb_idx],
                     myrank, MPI_COMM_WORLD, &request_send[nghb_idx]);
-            // Receive direc1
-            MPI_Irecv(recv_buff[nghb_idx], recv_cnt[nghb_idx], MPI_DOUBLE, nghb_to_rank[nghb_idx],
-                    nghb_to_rank[nghb_idx], MPI_COMM_WORLD, &request_recv[nghb_idx]);
         }
         // Synchronize everything
         for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
-            MPI_Wait(&request_send[nghb_idx], &status);
             MPI_Wait(&request_recv[nghb_idx], &status);
+            MPI_Wait(&request_send[nghb_idx], &status);
         }
         // Save received data for further use
         for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
-            for(nc=0; nc<send_cnt[nghb_idx]; ++nc) {
+            for(nc=0; nc<recv_cnt[nghb_idx]; ++nc) {
                 direc1[recv_lst[nghb_idx][nc]] = recv_buff[nghb_idx][nc];
             }
         }
+//        if (iter==max_iters-1) {
+//            check_compute_values(file_in, part_type, read_type, nprocs, myrank,
+//                    nintci, nintcf, nextcf,
+//                    resvec, direc1, direc2, var, cnorm);
+//        }
         /** STOP Exchange of direc1 with MPI **/
         // compute new guess (approximation) for direc
         for ( nc = nintci; nc <= nintcf; nc++ ) {
@@ -239,8 +254,8 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         nor1 = nor - 1;
         /********** END COMP PHASE 2 **********/
     }
-    vtk_check(file_in, myrank, nintci, nintcf, resvec, direc1, direc2, var, points_count, points,
-                    elems, local_global_index, (nintcf-nintci+1));
+//    vtk_check(file_in, myrank, nintci, nintcf, resvec, direc1, direc2, var, points_count, points,
+//                    elems, local_global_index, (nintcf-nintci+1));
 
     free(direc1);
     free(direc2);
@@ -249,7 +264,7 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     free(dxor1);
     free(dxor2);
     free(resvec);
-
+    printf("[INFO] Completed compute_solution on task #%d\n", myrank);
     return iter;
 }
 

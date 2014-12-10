@@ -159,7 +159,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
         }
     }
     if (OUTPUT_NINTCF_NINTCE) {
-        printf("rank%d,*nintcf=%d, *nextcf=%d\n", myrank,*nintcf,*nextcf);
+        printf("rank%d,*nintci=%d,*nintcf=%d, *nextci=%d, *nextcf=%d\n", myrank,*nintci,*nintcf,*nextci,*nextcf);
     } // End check lcc
     
     if (OUTPUT_LCC) {
@@ -229,6 +229,16 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     if (f_status != 0){
         return f_status;
     }
+//    check_initialization_values(file_in, part_type, read_type, nprocs, myrank,
+//            nintci_g, nintcf_g, nextci_g, nextcf_g, lcc_g,
+//            *nintci, *nintcf, *nextci,*nextcf, *lcc,
+//            *bs, *be, *bn, *bw, *bl, *bh, *bp, *su,
+//            points_count, *points, *elems,
+//            *var, *cgup, *oc, *cnorm,
+//            *local_global_index, *global_local_index,
+//            *nghb_cnt, *nghb_to_rank,
+//            *send_cnt, *send_lst,   *recv_cnt, *recv_lst,
+//            partitioning_map,  5);
     
     //convert global indexes
     converte_global2local_idx(myrank, *global_local_index, *nintci, *nintcf, *lcc, *nghb_cnt,

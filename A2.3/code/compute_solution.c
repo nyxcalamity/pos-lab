@@ -13,6 +13,12 @@
 // FIXME: delete next line
 #include "util_write_files.h"
 
+// FIXME: bring it back!
+//int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, int** lcc, double* bp,
+//                     double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
+//                     double* cnorm, double* var, double *su, double* cgup, double* residual_ratio,
+//                     int* local_global_index, int* global_local_index, int nghb_cnt,
+//                     int* nghb_to_rank, int* send_cnt, int** send_lst, int *recv_cnt, int** recv_lst) {
 int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, int** lcc, double* bp,
                      double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
                      double* cnorm, double* var, double *su, double* cgup, double* residual_ratio,
@@ -30,16 +36,10 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     /** buffers used to resend direc1 */
     int nghb_idx=0;
     double *send_buff[nghb_cnt];
-    double *recv_buff[nghb_cnt];
     for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        // FIXME: use mpi_data_type instead of buffer
         if ((send_buff[nghb_idx] = (double *) malloc(send_cnt[nghb_idx]*sizeof(double))) == NULL) {
             fprintf(stderr, "malloc(send_buff) failed\n");
-            MPI_Abort(MPI_COMM_WORLD, myrank);
-            return -1;
-        }
-        // TODO: in 4th milestone try not to use buffer but save it directly in direc1 array
-        if ((recv_buff[nghb_idx] = (double *) malloc(recv_cnt[nghb_idx]*sizeof(double))) == NULL) {
-            fprintf(stderr, "malloc(recv_buff) failed\n");
             MPI_Abort(MPI_COMM_WORLD, myrank);
             return -1;
         }
@@ -103,7 +103,7 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         /** START Exchange of direc1 with MPI **/
         for(nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
             // Receive direc1
-            MPI_Irecv(recv_buff[nghb_idx], recv_cnt[nghb_idx], MPI_DOUBLE, nghb_to_rank[nghb_idx],
+            MPI_Irecv(&direc1[recv_lst[nghb_idx][0]], recv_cnt[nghb_idx], MPI_DOUBLE, nghb_to_rank[nghb_idx],
                     nghb_to_rank[nghb_idx], MPI_COMM_WORLD, &request_recv[nghb_idx]);
             // Fill send_buff
             for(nc=0; nc<send_cnt[nghb_idx]; ++nc) {
@@ -118,12 +118,6 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
             MPI_Wait(&request_recv[nghb_idx], &status);
             MPI_Wait(&request_send[nghb_idx], &status);
         }
-        // Save received data for further use
-        for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
-            for(nc=0; nc<recv_cnt[nghb_idx]; ++nc) {
-                direc1[recv_lst[nghb_idx][nc]] = recv_buff[nghb_idx][nc];
-            }
-        }
 //        if (iter==max_iters-1) {
 //            check_compute_values(file_in, part_type, read_type, nprocs, myrank,
 //                    nintci, nintcf, nextcf,
@@ -132,8 +126,8 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         /** STOP Exchange of direc1 with MPI **/
         // compute new guess (approximation) for direc
         for ( nc = nintci; nc <= nintcf; nc++ ) {
-//            if(local_global_index[nc]==36507)
-//                printf("direc2=%.15lf,resvec=%.15lf,cgup=%.15lf\n",direc2[nc],resvec[nc],cgup[nc]);
+//FIXME:            if(local_global_index[nc]==36507)
+//FIXME:                printf("direc2=%.15lf,resvec=%.15lf,cgup=%.15lf\n",direc2[nc],resvec[nc],cgup[nc]);
             direc2[nc] = bp[nc] * direc1[nc] - bs[nc] * direc1[lcc[nc][0]]
                          - be[nc] * direc1[lcc[nc][1]] - bn[nc] * direc1[lcc[nc][2]]
                          - bw[nc] * direc1[lcc[nc][3]] - bl[nc] * direc1[lcc[nc][4]]
@@ -194,7 +188,7 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
                 if2++;
             }
         }
-//        printf("i%d,r%d,occ=%.15lf\n",iter,myrank,occ);
+//FIXME:        printf("i%d,r%d,occ=%.15lf\n",iter,myrank,occ);
 
         // compute the new residual
         cnorm[nor] = 0;
@@ -209,8 +203,8 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         cnorm[nor] = cnorm_g;
 
         MPI_Allreduce(&omega, &omega_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-//        printf("r%d, omega_g=%.20lf\n",myrank, omega_g);
-//        printf("r%d, cnorm[nor]=%.20lf\n",myrank, cnorm[nor]);
+//FIXME:        printf("r%d, omega_g=%.20lf\n",myrank, omega_g);
+//FIXME:        printf("r%d, cnorm[nor]=%.20lf\n",myrank, cnorm[nor]);
         omega = omega_g;
         omega = omega / cnorm[nor];
         double res_updated = 0.0;
@@ -220,7 +214,7 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
             res_updated = res_updated + resvec[nc] * resvec[nc];
             var[nc] = var[nc] + omega * direc1[nc];
         }
-//        printf("r%d, omega=%.20lf\n",myrank, omega);
+//FIXME:        printf("r%d, omega=%.20lf\n",myrank, omega);
         MPI_Allreduce(&res_updated, &res_updated_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         res_updated = res_updated_g;
         res_updated = sqrt(res_updated);
@@ -254,6 +248,7 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         nor1 = nor - 1;
         /********** END COMP PHASE 2 **********/
     }
+//    FIXME: delete
 //    vtk_check(file_in, myrank, nintci, nintcf, resvec, direc1, direc2, var, points_count, points,
 //                    elems, local_global_index, (nintcf-nintci+1));
 

@@ -12,7 +12,7 @@ void finalization(char* file_in, int nprocs, int myrank, int total_iters, double
                   int nintci, int nintcf, double* var) {
 
     char file_out[100];
-    sprintf(file_out, "%s_summary.r%d.out", file_in, myrank);
+    sprintf(file_out, "%s_summary.%d-%d.out", file_in, nprocs, myrank);
 
     int status = store_simulation_stats(file_in, file_out, nintci, nintcf, var, total_iters,
                                         residual_ratio);

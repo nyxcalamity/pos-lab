@@ -576,8 +576,8 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
 //    printf("r%d, nghb_cnt=%d\n", myrank, (*nghb_cnt));
 //    printf("r%d, recv_lst[0][0]=%d, recv_lst[0][1]=%d, recv_lst[0][2]=%d, recv_lst[0][3]=%d\n",
 //            myrank, (*recv_lst)[0][0], (*recv_lst)[0][1], (*recv_lst)[0][2], (*recv_lst)[0][3]);
-    printf("r%d, recv_cnt[0]=%d, recv_cnt[1]=%d, recv_cnt[2]=%d, recv_cnt[3]=%d\n",
-            myrank, (*recv_cnt)[0], (*recv_cnt)[1], (*recv_cnt)[2], (*recv_cnt)[3]);
+//    printf("r%d, recv_cnt[0]=%d, recv_cnt[1]=%d, recv_cnt[2]=%d, recv_cnt[3]=%d\n",
+//            myrank, (*recv_cnt)[0], (*recv_cnt)[1], (*recv_cnt)[2], (*recv_cnt)[3]);
 //    printf("r%d, tmp_recv_cnt[0]=%d, tmp_recv_cnt[1]=%d, tmp_recv_cnt[2]=%d, tmp_recv_cnt[3]=%d\n",
 //            myrank, tmp_recv_cnt[0], tmp_recv_cnt[1], tmp_recv_cnt[2], tmp_recv_cnt[3]);
 //    printf("r%d, n_ghost_cells[0]=%d, n_ghost_cells[1]=%d, n_ghost_cells[2]=%d, n_ghost_cells[3]=%d\n",
@@ -615,8 +615,8 @@ void allocate_send_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** se
         MPI_Recv(&(*send_cnt)[nghb_idx],1 , MPI_INT, (*nghb_to_rank)[nghb_idx], 
                 (*nghb_to_rank)[nghb_idx], MPI_COMM_WORLD, &status);
     }
-    printf("r%d, send_cnt[0]=%d, send_cnt[1]=%d, send_cnt[2]=%d, send_cnt[3]=%d\n",
-            myrank, (*send_cnt)[0], (*send_cnt)[1], (*send_cnt)[2], (*send_cnt)[3]);
+//    printf("r%d, send_cnt[0]=%d, send_cnt[1]=%d, send_cnt[2]=%d, send_cnt[3]=%d\n",
+//            myrank, (*send_cnt)[0], (*send_cnt)[1], (*send_cnt)[2], (*send_cnt)[3]);
     // Allocate send_lst with given sizes
     *send_lst = (int**) malloc( (*nghb_cnt)*sizeof(int*) );
     for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {

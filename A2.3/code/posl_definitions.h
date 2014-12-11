@@ -25,7 +25,7 @@
 //debug definitions
 #define OUTPUT_LCC_G                0
 #define OUTPUT_LCC                  0
-#define OUTPUT_NINTCF_NINTCE        1
+#define OUTPUT_NINTCF_NINTCE        0
 #define DEBUG_OUTPUT_L2G_G          0
 #define DEBUG_OUTPUT_PARTITIONING   0
         

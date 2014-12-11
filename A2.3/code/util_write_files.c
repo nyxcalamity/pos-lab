@@ -229,7 +229,7 @@ void build_vtk_out_name(char *file_name, const char* file_in, char* part_type, c
     char *data_file = strrchr(file_in,'/')+1;
     //strip data file base name
     data_file = strndup(data_file, strchr(data_file, '.')-data_file);
-    sprintf(file_name, "./%s/%s.%s.%s%s.%s.%d-%d.vtk",
+    sprintf(file_name, "./%s/%s.%s.%s.%s%s.%d-%d.vtk",
             out_dir, var_name, data_file, part_type, read_type, suffix, nprocs, myrank);
     free(data_file);
 }

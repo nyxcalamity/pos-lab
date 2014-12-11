@@ -249,8 +249,8 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         /********** END COMP PHASE 2 **********/
     }
 //    FIXME: delete
-//    vtk_check(file_in, myrank, nintci, nintcf, resvec, direc1, direc2, var, points_count, points,
-//                    elems, local_global_index, (nintcf-nintci+1));
+    vtk_check(file_in, part_type, read_type, nprocs, myrank, nintci, nintcf, resvec, direc1, direc2, var, points_count, points,
+                    elems, local_global_index, (nintcf-nintci+1));
 
     free(direc1);
     free(direc2);

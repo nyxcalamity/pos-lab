@@ -223,62 +223,72 @@ void vtk_for_process(const char *file_in, const char *file_vtk_out, int nintci, 
     printf("Data VTK file succesfully generated! \n");
 }
 
-
-//TODO:include all execution setup identifiers in the file name
-int vtk_check(char *file_in, int myrank, int nintci, int nintcf, double *resvec, double *direc1, double *direc2, double *var,
-        int points_count, int **points,  int *elems, int *local_global_index, int local_num_elems) {
-    char szFileName[80];
-    int i=0;
-    double *scalars;
-    //TODO:externalize this string
-    const char *kOutputDirectoryName = "./out/";
-    
+void build_vtk_out_name(char *file_name, const char* file_in, char* part_type, char* read_type, int nprocs, int myrank,
+        const char* out_dir, char* var_name, char* suffix) {
     //find base file name
     char *data_file = strrchr(file_in,'/')+1;
     //strip data file base name
     data_file = strndup(data_file, strchr(data_file, '.')-data_file);
+    sprintf(file_name, "./%s/%s.%s.%s%s.%s.%d-%d.vtk",
+            out_dir, var_name, data_file, part_type, read_type, suffix, nprocs, myrank);
+    free(data_file);
+}
+
+//TODO:include all execution setup identifiers in the file name
+int vtk_check(char *file_in, char* part_type, char* read_type, int nprocs, int myrank,
+        int nintci, int nintcf, double *resvec, double *direc1, double *direc2, double *var,
+        int points_count, int **points,  int *elems, int *local_global_index, int local_num_elems) {
+    char file_name[80];
+    int i=0;
+    double *scalars;
+    //TODO:externalize this string
+    const char *out_dir = "out";
+    char var_name[80];
     
     if ((scalars = (double *) malloc((nintcf+1)*sizeof(double))) == NULL) {
         fprintf(stderr, "malloc(local_global_index) failed\n");
         return -1;
     }
     // Output resvec
+    sprintf(var_name, "%s", "resvec");
     for (i=0; i<local_num_elems; i++){
         scalars[i] = resvec[i];
     }
-    sprintf(szFileName, "%s%s.resvec.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
-    test_distribution(file_in, szFileName, local_global_index, local_num_elems, scalars);
-    sprintf(szFileName, "%s%s.resvec.cutted.rank%i.vtk", kOutputDirectoryName,data_file, myrank);
-    vtk_for_process(file_in, szFileName, 0, local_num_elems-1, points_count, points, elems,
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, "");
+    test_distribution(file_in, file_name, local_global_index, local_num_elems, scalars);
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, ".cut");
+    vtk_for_process(file_in, file_name, 0, local_num_elems-1, points_count, points, elems,
             local_global_index, local_num_elems, scalars);
-    // Output CGUP
-    for (i=0; i<local_num_elems; i++){
-        scalars[i] = direc2[i];
-    }
-    sprintf(szFileName, "%s%s.direc2.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
-    test_distribution(file_in, szFileName, local_global_index, local_num_elems, scalars);
-    sprintf(szFileName, "%s%s.direc2.cutted.rank%i.vtk", kOutputDirectoryName,data_file, myrank);
-    vtk_for_process(file_in, szFileName, 0, local_num_elems-1, points_count, points, elems, 
-            local_global_index, local_num_elems, scalars);
-    // Output SU
+    // Output direc1
+    sprintf(var_name, "%s", "direc1");
     for (i=0; i<local_num_elems; i++){
         scalars[i] = direc1[i];
     }
-    sprintf(szFileName, "%s%s.direc1.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
-    test_distribution(file_in, szFileName, local_global_index, local_num_elems, scalars);
-    sprintf(szFileName, "%s%s.direc1.cutted.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
-    vtk_for_process(file_in, szFileName, 0, local_num_elems-1, points_count, points, elems, 
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, "");
+    test_distribution(file_in, file_name, local_global_index, local_num_elems, scalars);
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, ".cut");
+    vtk_for_process(file_in, file_name, 0, local_num_elems-1, points_count, points, elems,
+            local_global_index, local_num_elems, scalars);
+    // Output direc2
+    sprintf(var_name, "%s", "direc2");
+    for (i=0; i<local_num_elems; i++){
+        scalars[i] = direc2[i];
+    }
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, "");
+    test_distribution(file_in, file_name, local_global_index, local_num_elems, scalars);
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, ".cut");
+    vtk_for_process(file_in, file_name, 0, local_num_elems-1, points_count, points, elems, 
             local_global_index, local_num_elems, scalars);
     // Output VAR
+    sprintf(var_name, "%s", "var");
     for (i=0; i<local_num_elems; i++){
         scalars[i] = var[i];
     }
-    sprintf(szFileName, "%s%s.var.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
-    test_distribution(file_in, szFileName, local_global_index, local_num_elems, scalars);
-    sprintf(szFileName, "%s%s.var.cutted.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
-    vtk_for_process(file_in, szFileName, 0, local_num_elems-1, points_count, points, elems,
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, "");
+    test_distribution(file_in, file_name, local_global_index, local_num_elems, scalars);
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, ".cut");
+    vtk_for_process(file_in, file_name, 0, local_num_elems-1, points_count, points, elems,
             local_global_index, local_num_elems, scalars);
-    free(data_file);
     return 0;
 }
 // FIXME: add an argument which says what we want to show(recv,send,both)

@@ -208,8 +208,6 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
 
     // VTK check
     if (OUTPUT_VTK) {
-        f_status = vtk_check(file_in, myrank, *nintci, *nintcf, *bp, *su, *cgup, *var, *points_count, *points,
-                *elems, *local_global_index, (*nintcf-*nintci+1));
         vtk_check_lists(file_in, myrank,
                 *local_global_index, (*nintcf-*nintci+1),
                 *nghb_cnt, *nghb_to_rank, *send_cnt, *send_lst,

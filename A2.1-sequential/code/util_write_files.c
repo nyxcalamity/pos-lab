@@ -443,4 +443,134 @@ void vtk_check_neighbour(char *file_in, int myrank,
 
     test_distribution(file_in, szFileName, local_global_index_big, local_num_elems_big, scalars);
 }
+
+
+int output_lcc(char* file_suffix, int myrank, int nintcf, int** lcc) {
+    int i=0;
+    char file_out[100];
+    char out_folder[]="output";
+    sprintf(file_out, "./%s/%s.%s",out_folder, "lcc", file_suffix);
+    FILE *fp = fopen(file_out, "w");
+    if ( fp == NULL ) {
+        fprintf(stderr, "Error opening file %s for writing\n", file_out);
+        return -1;
+    }
+    for (i=0; i<=nintcf; ++i) {
+        fprintf(fp,"%-10d %-10d %-10d %-10d %-10d %-10d\n",
+                lcc[i][0],lcc[i][1],lcc[i][2],lcc[i][3],lcc[i][4],lcc[i][5]);
+    }
+    fclose(fp);
+    return 0;
+}
+int ouput_b(char*file_suffix, int myrank, int nextcf, double *b_, char *b_name) {
+    int i=0;
+    char file_out[100];
+    char out_folder[]="output";
+    sprintf(file_out, "./%s/%s.%s",out_folder, b_name, file_suffix);
+    FILE *fp = fopen(file_out, "w");
+    if ( fp == NULL ) {
+        fprintf(stderr, "Error opening file %s for writing\n", file_out);
+        return -1;
+    }
+    for (i=0; i<=nextcf; ++i) {
+        fprintf(fp,"%.15lf\n",  b_[i]);
+    }
+    fclose(fp);
+    return 0;
+}
+int ouput_l2g_g2l(char* file_suffix, int myrank, int nelems, int* map, char* map_name) {
+    int i=0;
+    char file_out[100];
+    char out_folder[]="output";
+    sprintf(file_out, "./%s/%s.%s",out_folder, map_name, file_suffix);
+    FILE *fp = fopen(file_out, "w");
+    if ( fp == NULL ) {
+        fprintf(stderr, "Error opening file %s for writing\n", file_out);
+        return -1;
+    }
+    for (i=0; i<nelems; ++i) {
+        fprintf(fp,"%d\n",  map[i]);
+    }
+    fclose(fp);
+    return 0;
+}
+int write_lists(char* file_suffix, int myrank, int nghb_cnt, int *list_cnt, int** list, char *list_name) {
+    int nghb_idx=0;
+    int i=0;
+    char file_out[100];
+    char out_folder[]="output";
+    sprintf(file_out, "./%s/%s.%s",out_folder, list_name, file_suffix);
+    FILE *fp = fopen(file_out, "w");
+    if ( fp == NULL ) {
+        fprintf(stderr, "Error opening file %s for writing\n", file_out);
+        return -1;
+    }
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        fprintf(fp,"%d\n\n",  list_cnt[nghb_idx]);
+        for (i=0; i<list_cnt[nghb_idx]; ++i) {
+            fprintf(fp, "%d\n", list[nghb_idx][i]);
+        }
+        fprintf(fp, "\n");
+    }
+    fclose(fp);
+    return 0;
+}
+
+
+int check_compute_values(char *file_in, char* part_type, char* read_type, int nprocs, int myrank,
+        int nintci, int nintcf, int nextcf, double omega, int nor,
+        double *resvec, double *direc1, double *direc2, double *var,double* cnorm,
+        int **l2g_g, int *int_cells_per_proc) {
+    int rank =0, i=0;
+    double *var_buff;
+    char file_suffix[100];
+    char file_out[100];
+    char out_folder[]="output";
+    //find base file name
+    char *data_file = strrchr(file_in,'/')+1;
+    //strip data file base name
+    data_file = strndup(data_file, strchr(data_file, '.')-data_file);
+    for (rank=0; rank<nprocs; ++rank) {
+        var_buff = (double *) malloc((int_cells_per_proc[rank])*sizeof(double));
+        sprintf(file_suffix, "%s.%s-%s.%d.out",data_file,part_type,read_type,rank);
+        sprintf(file_out, "./%s/%s",out_folder, file_suffix);
+        FILE *fp = fopen(file_out, "w");
+        if ( fp == NULL ) {
+            fprintf(stderr, "Error opening file %s for writing\n", file_out);
+            return -1;
+        }
+
+        fprintf(fp,"omega=%.20lf\n",  omega);
+        fprintf(fp,"cnorm[%d]=%.20lf\n", nor,  cnorm[nor]);
+
+        for (i=0; i<int_cells_per_proc[rank]; ++i) {
+            var_buff[i]=direc1[l2g_g[rank][i]];
+        }
+        ouput_b(file_suffix, rank, int_cells_per_proc[rank]-1, var_buff, "direc1");
+
+        for (i=0; i<int_cells_per_proc[rank]; ++i) {
+            var_buff[i]=direc2[l2g_g[rank][i]];
+        }
+        ouput_b(file_suffix, rank, int_cells_per_proc[rank]-1, var_buff, "direc2");
+
+        for (i=0; i<int_cells_per_proc[rank]; ++i) {
+            var_buff[i]=resvec[l2g_g[rank][i]];
+        }
+        ouput_b(file_suffix, rank, int_cells_per_proc[rank]-1, var_buff, "resvec");
+
+        for (i=0; i<int_cells_per_proc[rank]; ++i) {
+            var_buff[i]=cnorm[l2g_g[rank][i]];
+        }
+        ouput_b(file_suffix, rank, int_cells_per_proc[rank]-1, var_buff, "cnorm");
+
+        for (i=0; i<int_cells_per_proc[rank]; ++i) {
+            var_buff[i]=var[l2g_g[rank][i]];
+        }
+        ouput_b(file_suffix, rank, int_cells_per_proc[rank]-1, var_buff, "var");
+
+        free(var_buff);
+        fclose(fp);
+    }
+    return 0;
+}
 // end_of_student_code-----------------------------------------------------------------------------------

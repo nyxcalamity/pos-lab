@@ -203,8 +203,8 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         cnorm[nor] = cnorm_g;
 
         MPI_Allreduce(&omega, &omega_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-//FIXME:        printf("r%d, omega_g=%.20lf\n",myrank, omega_g);
-//FIXME:        printf("r%d, cnorm[nor]=%.20lf\n",myrank, cnorm[nor]);
+//        printf("r%d, omega_g=%.30lf\n",myrank, omega_g);
+//        printf("r%d, cnorm[nor]=%.30lf\n",myrank, cnorm[nor]);
         omega = omega_g;
         omega = omega / cnorm[nor];
         double res_updated = 0.0;
@@ -247,10 +247,15 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         }
         nor1 = nor - 1;
         /********** END COMP PHASE 2 **********/
+        if (iter==max_iters) {
+            check_compute_values(file_in, part_type, read_type, nprocs, myrank,
+                    nintci, nintcf, nextcf, omega, nor,
+                    resvec, direc1, direc2, var, cnorm);
+        }
     }
 //    FIXME: delete
-    vtk_check(file_in, part_type, read_type, nprocs, myrank, nintci, nintcf, resvec, direc1, direc2, var, points_count, points,
-                    elems, local_global_index, (nintcf-nintci+1));
+//    vtk_check(file_in, part_type, read_type, nprocs, myrank, nintci, nintcf, resvec, direc1, direc2, var, points_count, points,
+//                    elems, local_global_index, (nintcf-nintci+1));
 
     free(direc1);
     free(direc2);

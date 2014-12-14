@@ -104,7 +104,7 @@ int check_compute_arguments(int nprocs, int myrank, const int max_iters, int nin
 
 
 int check_compute_values(char *file_in, char* part_type, char* read_type, int nprocs, int myrank,
-        int nintci, int nintcf, int nextcf,
+        int nintci, int nintcf, int nextcf, double omega, int nor,
         double *resvec, double *direc1, double *direc2, double *var,double* cnorm);
 
 

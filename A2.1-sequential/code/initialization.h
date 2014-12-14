@@ -13,7 +13,7 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
                    int* nextcf, int*** lcc, double** bs, double** be, double** bn, double** bw,
                    double** bl, double** bh, double** bp, double** su, int* points_count,
                    int*** points, int** elems, double** var, double** cgup, double** oc,
-                   double** cnorm, int** local_global_index);
+                   double** cnorm, int** local_global_index, int *** l2g_g, int* int_cells_per_proc);
 
 #endif /* INITIALIZATION_H_ */
 

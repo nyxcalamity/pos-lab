@@ -585,19 +585,32 @@ int check_compute_arguments(int nprocs, int myrank, const int max_iters, int nin
 }
 
 int check_compute_values(char *file_in, char* part_type, char* read_type, int nprocs, int myrank,
-        int nintci, int nintcf, int nextcf,
+        int nintci, int nintcf, int nextcf, double omega, int nor,
         double *resvec, double *direc1, double *direc2, double *var,double* cnorm) {
     char file_suffix[100];
+    char file_out[100];
+    char out_folder[]="output";
     //find base file name
     char *data_file = strrchr(file_in,'/')+1;
     //strip data file base name
     data_file = strndup(data_file, strchr(data_file, '.')-data_file);
     sprintf(file_suffix, "%s.%s-%s.%d.out",data_file,part_type,read_type,myrank);
-    ouput_b(file_suffix, myrank, nextcf, direc1, "direc1");
-    ouput_b(file_suffix, myrank, nextcf, direc2, "direc2");
+    sprintf(file_out, "./%s/%s",out_folder, file_suffix);
+    FILE *fp = fopen(file_out, "w");
+    if ( fp == NULL ) {
+        fprintf(stderr, "Error opening file %s for writing\n", file_out);
+        return -1;
+    }
+
+    fprintf(fp,"omega=%.20lf\n",  omega);
+    fprintf(fp,"cnorm[%d]=%.20lf\n", nor,  cnorm[nor]);
+
+    ouput_b(file_suffix, myrank, nintcf, direc1, "direc1");
+    ouput_b(file_suffix, myrank, nintcf, direc2, "direc2");
     ouput_b(file_suffix, myrank, nintcf, resvec, "resvec");
     ouput_b(file_suffix, myrank, nintcf, cnorm, "cnorm");
-    ouput_b(file_suffix, myrank, nextcf, var, "var");
+    ouput_b(file_suffix, myrank, nintcf, var, "var");
+    fclose(fp);
     return 0;
 }
 

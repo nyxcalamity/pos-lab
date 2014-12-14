@@ -94,6 +94,11 @@ void vtk_check_neighbour(char *file_in, int myrank,
         int *local_global_index, int local_num_elems,
         int nghb_cnt, int* nghb_to_rank, int* send_cnt, int** send_lst,
         int *recv_cnt, int** recv_lst, int output_style, int neighbour);
+
+int check_compute_values(char *file_in, char* part_type, char* read_type, int nprocs, int myrank,
+        int nintci, int nintcf, int nextcf, double omega, int nor,
+        double *resvec, double *direc1, double *direc2, double *var,double* cnorm,
+        int **l2g_g, int *int_cells_per_proc);
 // end_of_student_code-----------------------------------------------------------------------------------
 #endif /* XWRITE_H_ */
 

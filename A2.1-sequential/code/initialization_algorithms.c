@@ -55,9 +55,9 @@ void bcast_partitioning(int read_key, int myrank, int **partitioning_map, int *n
 
 
 int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g, 
-        int nintcf_g, int nextci_g, int nextcf_g, int *nintci, int *nintcf, int *nextci, int *nextcf, 
-        int **lcc_g, int points_count_g, int **points_g, int *elems_g, int *int_cells_per_proc, 
-        int *extcell_per_proc, int **local_global_index_g, int **local_global_index, int **partitioning_map) {
+        int nintcf_g, int nextci_g, int nextcf_g,
+        int **lcc_g, int points_count_g, int **points_g, int *elems_g, int *int_cells_per_proc,
+        int **partitioning_map) {
     int i=0;
     idx_t nelems, nnodes, ncommon, nparts, objval;
     idx_t *elem_ptr, *elem_idx, *elem_part, *node_part;
@@ -66,12 +66,9 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
     *partitioning_map = (int *) calloc(sizeof(int), (nintcf_g-nintci_g+1));
     
     if (((read_key == POSL_INIT_ONE_READ) && (myrank == 0)) || (read_key == POSL_INIT_ALL_READ)) {
-        *nintci = 0; *nintcf = 0;
         if (part_key == POSL_PARTITIONING_CLASSIC) {
             //the last processor always gets different number of cells
             int elem_per_proc = (nelems+(nprocs-1))/nprocs;
-            *nextci = (myrank == nprocs-1) ? nelems-(nprocs-1)*elem_per_proc : elem_per_proc;
-            *nintcf = *nextci-1;
             
             //build global cell allocation
             if (read_key == POSL_INIT_ONE_READ) {
@@ -122,23 +119,13 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
                 }
             }
             
-            //FIXME: if statement should be outside of the loop
             //compute position of last internal cell
             for (i=0; i<nelems; i++) {
                 if (read_key == POSL_INIT_ONE_READ) {
                     int_cells_per_proc[(*partitioning_map)[i]] += 1;
-                } else {
-                    if (myrank == (*partitioning_map)[i]) {
-                        (*nintcf) += 1;
-                    }
                 }
             }
             
-            //assign local internal cell ending idx
-            if (read_key == POSL_INIT_ONE_READ) {
-                *nintcf = int_cells_per_proc[myrank];
-            }
-            *nextci = (*nintcf)--;
         }
     }
     return 0;
@@ -402,20 +389,9 @@ int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nin
 }
 
 
-void fill_l2g(int read_key, int myrank, int nproc, int nintcf, int** local_global_index, 
+void fill_l2g(int read_key, int myrank, int nproc,
         int ***local_global_index_g, int *partitioning_map, int nelems_g, int *int_cells_per_proc) {
     int i=0, local_idx=0, current_proc=0;
-    if ((*local_global_index = (int *) malloc(((nintcf)+1)*sizeof(int))) == NULL) {
-        //FIXME:handle this error
-        fprintf(stderr, "malloc(local_global_index) failed\n");
-    }
-
-    for (i=0; i<nelems_g; ++i) {
-        if (partitioning_map[i] == myrank) {
-            (*local_global_index)[local_idx] = i;
-            ++local_idx;
-        }
-    }
     
     //TODO:refactor code to reduce duplicates
     //in addition build global global to local if applicable

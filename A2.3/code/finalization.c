@@ -9,7 +9,7 @@
 #include "util_write_files.h"
 
 void finalization(char* file_in, int nprocs, int myrank, int total_iters, double residual_ratio,
-                  int nintci, int nintcf, double* var) {
+                  int nintci, int nintcf, double* var, int* local_global_index, int* global_local_index) {
 
     char file_out[100];
     sprintf(file_out, "%s_summary.%d-%d.out", file_in, nprocs, myrank);

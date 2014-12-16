@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
     /********** END COMPUTATIONAL LOOP **********/
 
     /********** START FINALIZATION **********/
-    finalization(file_in, num_procs, my_rank, total_iters, residual_ratio, nintci, nintcf, var);
+    finalization(file_in, num_procs, my_rank, total_iters, residual_ratio, nintci, nintcf, var, local_global_index, global_local_index);
     /********** END FINALIZATION **********/
 
     // cleanup allocated memory

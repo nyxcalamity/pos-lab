@@ -33,17 +33,11 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
 //                         file_in, points_count, points, elems, part_type, read_type);
     MPI_Status status;
     MPI_Request request_send[nghb_cnt], request_recv[nghb_cnt];
+    MPI_Datatype index_type[nghb_cnt];
+    int *mpi_block_length[nghb_cnt], *mpi_displacements[nghb_cnt];
+    
     /** buffers used to resend direc1 */
     int nghb_idx=0;
-    double *send_buff[nghb_cnt];
-    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
-        // FIXME: use mpi_data_type instead of buffer
-        if ((send_buff[nghb_idx] = (double *) malloc(send_cnt[nghb_idx]*sizeof(double))) == NULL) {
-            fprintf(stderr, "malloc(send_buff) failed\n");
-            MPI_Abort(MPI_COMM_WORLD, myrank);
-            return -1;
-        }
-    }
 
     /** parameters used in gccg */
     int iter = 1;
@@ -86,6 +80,20 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     double *adxor2 = (double *) calloc(sizeof(double), (nintcf + 1));
     double *dxor1 = (double *) calloc(sizeof(double), (nintcf + 1));
     double *dxor2 = (double *) calloc(sizeof(double), (nintcf + 1));
+    
+    //initialize mpi indexed data type arrays
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        if ((mpi_block_length[nghb_idx] = (int *) malloc(send_cnt[nghb_idx]*sizeof(int))) == NULL) {
+            fprintf(stderr, "malloc(mpi_block_length) failed\n");
+            MPI_Abort(MPI_COMM_WORLD, myrank);
+            return -1;
+        }
+        if ((mpi_displacements[nghb_idx] = (int *) malloc(send_cnt[nghb_idx]*sizeof(int))) == NULL) {
+            fprintf(stderr, "malloc(mpi_displacements) failed\n");
+            MPI_Abort(MPI_COMM_WORLD, myrank);
+            return -1;
+        }
+    }
 
     while ( iter < max_iters ) {
 //        if (iter==max_iters-1) {
@@ -99,18 +107,25 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
 //            if(local_global_index[nc]==36507)
 //                printf("direc1=%.15lf,resvec=%.15lf,cgup=%.15lf\n",direc1[nc],resvec[nc],cgup[nc]);
             direc1[nc] = direc1[nc] + resvec[nc] * cgup[nc];
-        }
+        }       
+
         /** START Exchange of direc1 with MPI **/
         for(nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
             // Receive direc1
             MPI_Irecv(&direc1[recv_lst[nghb_idx][0]], recv_cnt[nghb_idx], MPI_DOUBLE, nghb_to_rank[nghb_idx],
                     nghb_to_rank[nghb_idx], MPI_COMM_WORLD, &request_recv[nghb_idx]);
-            // Fill send_buff
+
+            //initialize and register mpi data type
             for(nc=0; nc<send_cnt[nghb_idx]; ++nc) {
-                send_buff[nghb_idx][nc] = direc1[send_lst[nghb_idx][nc]];
+                mpi_block_length[nghb_idx][nc] = 1;
+                mpi_displacements[nghb_idx][nc] = send_lst[nghb_idx][nc];
             }
+            MPI_Type_indexed(send_cnt[nghb_idx], mpi_block_length[nghb_idx], mpi_displacements[nghb_idx], 
+                MPI_DOUBLE, &index_type[nghb_idx]);
+            MPI_Type_commit(&index_type[nghb_idx]);
+            
             // Send direc1
-            MPI_Isend(send_buff[nghb_idx], send_cnt[nghb_idx], MPI_DOUBLE, nghb_to_rank[nghb_idx],
+            MPI_Isend(direc1, 1, index_type[nghb_idx], nghb_to_rank[nghb_idx],
                     myrank, MPI_COMM_WORLD, &request_send[nghb_idx]);
         }
         // Synchronize everything
@@ -254,8 +269,8 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         }
     }
 //    FIXME: delete
-//    vtk_check(file_in, part_type, read_type, nprocs, myrank, nintci, nintcf, resvec, direc1, direc2, var, points_count, points,
-//                    elems, local_global_index, (nintcf-nintci+1));
+    vtk_check(file_in, part_type, read_type, nprocs, myrank, nintci, nintcf, resvec, direc1, direc2, var, points_count, points,
+                    elems, local_global_index, (nintcf-nintci+1));
 
     free(direc1);
     free(direc2);
@@ -267,5 +282,3 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     printf("[INFO] Completed compute_solution on task #%d\n", myrank);
     return iter;
 }
-
-

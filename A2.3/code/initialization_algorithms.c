@@ -203,8 +203,9 @@ int fill_lcc_elems_points(int read_key, int myrank, int nprocs, int nintci, int 
         int points_count, int** points, int* elems, int *local_global_index,  int **local_global_index_g,
         int **lcc_g, int points_count_g, int** points_g, int **elems_g, int *int_cells_per_proc) {
     int proc=0, i=0;
-    int *buff;
     MPI_Status status;
+    MPI_Datatype index_type;
+    
     if (read_key == POSL_INIT_ONE_READ) {
         if (myrank == 0) {
             for (proc=1; proc<nprocs; ++proc) {
@@ -217,24 +218,17 @@ int fill_lcc_elems_points(int read_key, int myrank, int nprocs, int nintci, int 
                     MPI_Send(points_g[i], 3, MPI_INT, proc, POSL_MPI_TAG_POINTS, MPI_COMM_WORLD);
                 }
                 
-                //TODO:Use MPI custom data types (indexing))
-                //allocate proper buffer memory
-                if ((buff = (int *) malloc(int_cells_per_proc[proc]*8*sizeof(int))) == NULL) {
-                    fprintf(stderr, "malloc() element buffer allocation failed\n");
-                    return -1;
-                }
-                
-                //fill the buffer
+                //create and register new datatype within mpi
+                int mpi_block_length[int_cells_per_proc[proc]], mpi_displacements[int_cells_per_proc[proc]];
                 for (i=0; i<int_cells_per_proc[proc]; ++i) {
-                    memcpy(&(buff[8*i]), &((*elems_g)[8*local_global_index_g[proc][i]]), 8*sizeof(int));
+                    mpi_block_length[i] = 8;
+                    mpi_displacements[i] = 8*local_global_index_g[proc][i];
                 }
-                                
-                //send the elements
-                MPI_Send(buff, int_cells_per_proc[proc]*8, MPI_INT, proc, POSL_MPI_TAG_ELEMENTS, 
-                        MPI_COMM_WORLD);
+                MPI_Type_indexed(int_cells_per_proc[proc], mpi_block_length, mpi_displacements, 
+                        MPI_INT, &index_type);
+                MPI_Type_commit(&index_type);
                 
-                //free buffer memory
-                free(buff);
+                MPI_Send(*(elems_g), 1, index_type, proc, POSL_MPI_TAG_ELEMENTS, MPI_COMM_WORLD);
             }
         } else {
             for (i=nintci; i<nintcf+1; ++i) {
@@ -303,87 +297,41 @@ int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nin
         double **be_g, double **bn_g, double **bw_g, double **bl_g, double **bh_g, double **bp_g, 
         double **su_g, int *int_cells_per_proc) {
     int proc=0, i=0;
-    double *buf_bs, *buf_be, *buf_bn, *buf_bw, *buf_bl, *buf_bh, *buf_bp, *buf_su;
     MPI_Status status;
+    MPI_Datatype index_type;
+    
     if (read_key == POSL_INIT_ONE_READ) {
         if (myrank == 0) {
             for (proc=1; proc<nprocs; ++proc) {
-                //allocate buffers
-                if ((buf_bs = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-                if ((buf_be = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-                if ((buf_bn = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-                if ((buf_bw = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-                if ((buf_bl = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-                if ((buf_bh = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-                if ((buf_bp = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-                if ((buf_su = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-
-                //fill in buffer data
+                //create and register new datatype within mpi
+                int mpi_block_length[int_cells_per_proc[proc]], mpi_displacements[int_cells_per_proc[proc]];
                 for (i=0; i<int_cells_per_proc[proc]; ++i) {
-                    buf_bs[i] = (*bs_g)[local_global_index_g[proc][i]];
-                    buf_be[i] = (*be_g)[local_global_index_g[proc][i]];
-                    buf_bn[i] = (*bn_g)[local_global_index_g[proc][i]];
-                    buf_bw[i] = (*bw_g)[local_global_index_g[proc][i]];
-                    buf_bl[i] = (*bl_g)[local_global_index_g[proc][i]];
-                    buf_bh[i] = (*bh_g)[local_global_index_g[proc][i]];
-                    buf_bp[i] = (*bp_g)[local_global_index_g[proc][i]];
-                    buf_su[i] = (*su_g)[local_global_index_g[proc][i]];
+                    mpi_block_length[i] = 1;
+                    mpi_displacements[i] = local_global_index_g[proc][i];
                 }
+                MPI_Type_indexed(int_cells_per_proc[proc], mpi_block_length, mpi_displacements, 
+                        MPI_DOUBLE, &index_type);
+                MPI_Type_commit(&index_type);
                 
                 //send the data
-                //FIXME: externalize mpi tags
-                MPI_Send(buf_bs, int_cells_per_proc[proc], MPI_DOUBLE, proc, 101, MPI_COMM_WORLD);
-                MPI_Send(buf_be, int_cells_per_proc[proc], MPI_DOUBLE, proc, 102, MPI_COMM_WORLD);
-                MPI_Send(buf_bn, int_cells_per_proc[proc], MPI_DOUBLE, proc, 103, MPI_COMM_WORLD);
-                MPI_Send(buf_bw, int_cells_per_proc[proc], MPI_DOUBLE, proc, 104, MPI_COMM_WORLD);
-                MPI_Send(buf_bl, int_cells_per_proc[proc], MPI_DOUBLE, proc, 105, MPI_COMM_WORLD);
-                MPI_Send(buf_bh, int_cells_per_proc[proc], MPI_DOUBLE, proc, 106, MPI_COMM_WORLD);
-                MPI_Send(buf_bp, int_cells_per_proc[proc], MPI_DOUBLE, proc, 107, MPI_COMM_WORLD);
-                MPI_Send(buf_su, int_cells_per_proc[proc], MPI_DOUBLE, proc, 108, MPI_COMM_WORLD);
-                
-                //free buffer memory
-                free(buf_bs);
-                free(buf_be);
-                free(buf_bn);
-                free(buf_bw);
-                free(buf_bl);
-                free(buf_bh);
-                free(buf_bp);
-                free(buf_su);
+                MPI_Send(*(bs_g), 1, index_type, proc, POSL_MPI_TAG_BS, MPI_COMM_WORLD);
+                MPI_Send(*(be_g), 1, index_type, proc, POSL_MPI_TAG_BE, MPI_COMM_WORLD);
+                MPI_Send(*(bn_g), 1, index_type, proc, POSL_MPI_TAG_BN, MPI_COMM_WORLD);
+                MPI_Send(*(bw_g), 1, index_type, proc, POSL_MPI_TAG_BW, MPI_COMM_WORLD);
+                MPI_Send(*(bl_g), 1, index_type, proc, POSL_MPI_TAG_BL, MPI_COMM_WORLD);
+                MPI_Send(*(bh_g), 1, index_type, proc, POSL_MPI_TAG_BH, MPI_COMM_WORLD);
+                MPI_Send(*(bp_g), 1, index_type, proc, POSL_MPI_TAG_BP, MPI_COMM_WORLD);
+                MPI_Send(*(su_g), 1, index_type, proc, POSL_MPI_TAG_SU, MPI_COMM_WORLD);
             }
         } else {
-            MPI_Recv(bs, (nintcf+1), MPI_DOUBLE, 0, 101, MPI_COMM_WORLD, &status);
-            MPI_Recv(be, (nintcf+1), MPI_DOUBLE, 0, 102, MPI_COMM_WORLD, &status);
-            MPI_Recv(bn, (nintcf+1), MPI_DOUBLE, 0, 103, MPI_COMM_WORLD, &status);
-            MPI_Recv(bw, (nintcf+1), MPI_DOUBLE, 0, 104, MPI_COMM_WORLD, &status);
-            MPI_Recv(bl, (nintcf+1), MPI_DOUBLE, 0, 105, MPI_COMM_WORLD, &status);
-            MPI_Recv(bh, (nintcf+1), MPI_DOUBLE, 0, 106, MPI_COMM_WORLD, &status);
-            MPI_Recv(bp, (nintcf+1), MPI_DOUBLE, 0, 107, MPI_COMM_WORLD, &status);
-            MPI_Recv(su, (nintcf+1), MPI_DOUBLE, 0, 108, MPI_COMM_WORLD, &status);
+            MPI_Recv(bs, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_BS, MPI_COMM_WORLD, &status);
+            MPI_Recv(be, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_BE, MPI_COMM_WORLD, &status);
+            MPI_Recv(bn, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_BN, MPI_COMM_WORLD, &status);
+            MPI_Recv(bw, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_BW, MPI_COMM_WORLD, &status);
+            MPI_Recv(bl, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_BL, MPI_COMM_WORLD, &status);
+            MPI_Recv(bh, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_BH, MPI_COMM_WORLD, &status);
+            MPI_Recv(bp, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_BP, MPI_COMM_WORLD, &status);
+            MPI_Recv(su, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_SU, MPI_COMM_WORLD, &status);
         }
     }
     if (read_key == POSL_INIT_ALL_READ || (read_key == POSL_INIT_ONE_READ && myrank ==0)) {

@@ -21,6 +21,14 @@
 #define POSL_MPI_TAG_LCC            3
 #define POSL_MPI_TAG_POINTS         99
 #define POSL_MPI_TAG_ELEMENTS       100
+#define POSL_MPI_TAG_BS             101
+#define POSL_MPI_TAG_BE             102
+#define POSL_MPI_TAG_BN             103
+#define POSL_MPI_TAG_BW             104
+#define POSL_MPI_TAG_BL             105
+#define POSL_MPI_TAG_BH             106
+#define POSL_MPI_TAG_BP             107
+#define POSL_MPI_TAG_SU             108
 
 //debug definitions
 #define OUTPUT_LCC_G                0

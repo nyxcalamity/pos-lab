@@ -12,4 +12,3 @@ void finalization(char* file_in, int nprocs, int myrank, int total_iters, double
 				int nintci, int nintcf, double* var, int* local_global_index, int* global_local_index);
 
 #endif /* FINALIZATION_H_ */
-

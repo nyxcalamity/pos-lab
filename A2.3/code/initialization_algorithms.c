@@ -87,7 +87,7 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
         } else {
             //initialize variables for metis
             nnodes = points_count_g;
-            //FIXME:perform a proper constant externalization
+            //TODO:perform a proper constant externalization
             ncommon = 4;
             nparts = nprocs;
             elem_ptr = (idx_t *) calloc(nelems+1, sizeof(idx_t));
@@ -122,7 +122,7 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
                 }
             }
             
-            //FIXME: if statement should be outside of the loop
+            //TODO: consider performance gains when if statement is outside of the loop
             //compute position of last internal cell
             for (i=0; i<nelems; i++) {
                 if (read_key == POSL_INIT_ONE_READ) {
@@ -354,7 +354,7 @@ void fill_l2g(int read_key, int myrank, int nproc, int nintcf, int** local_globa
         int ***local_global_index_g, int *partitioning_map, int nelems_g, int *int_cells_per_proc) {
     int i=0, local_idx=0, current_proc=0;
     if ((*local_global_index = (int *) malloc(((nintcf)+1)*sizeof(int))) == NULL) {
-        //FIXME:handle this error
+        //TODO:handle this error
         fprintf(stderr, "malloc(local_global_index) failed\n");
     }
 
@@ -368,7 +368,7 @@ void fill_l2g(int read_key, int myrank, int nproc, int nintcf, int** local_globa
     //TODO:refactor code to reduce duplicates
     //in addition build global global to local if applicable
     if (read_key == POSL_INIT_ONE_READ && myrank == 0) {        
-        //FIXME:handle memory allocation errors
+        //TODO:handle memory allocation errors
         if ((*local_global_index_g = (int**) malloc(nproc*sizeof(int*))) == NULL){
             fprintf(stderr, "malloc failed to allocate first dimension of l2g_g");
         }
@@ -421,7 +421,7 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
 
     if ((*global_local_index = (int *) malloc((nextcf_g+1)*sizeof(int))) == NULL) {
         fprintf(stderr, "malloc(global_local_index) in build_lists_g2l_next failed\n");
-        //FIXME:handle this error
+        //TODO:handle this error
     }
     // We will fill whole g2l by -1 for easier debugging
     for (i=0; i<=nextcf_g; ++i) {
@@ -499,7 +499,7 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
     // Allocate and fill nhb_to_rank
     if ((*nghb_to_rank = (int *) malloc((*nghb_cnt)*sizeof(int))) == NULL) {
         fprintf(stderr, "malloc(nghb_to_rank) in build_lists_g2l_next failed\n");
-        //FIXME:handle this error
+        //TODO:handle this error
     }
     for (proc=0;proc<nprocs; ++proc) {
         if(tmp_recv_cnt[proc] !=0) {

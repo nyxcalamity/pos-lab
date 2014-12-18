@@ -12,6 +12,7 @@
 #include "test_functions.h"
 #include "posl_definitions.h"
 
+
 int store_simulation_stats(char *in_file_name, char *out_file_name, int nintci, int nintcf,
                            double *var, int total_iters, double residual_ratio) {
     double *points = (double *) malloc((nintcf + 1) * sizeof(double));
@@ -97,6 +98,7 @@ int store_simulation_stats(char *in_file_name, char *out_file_name, int nintci, 
     return 0;
 }
 
+
 void vtk_write_unstr_grid_header(const char *experiment_name, const char *out_file_name,
                                  int start_index, int end_index, int points_count, int **points,
                                  int *elems) {
@@ -161,6 +163,7 @@ void vtk_write_unstr_grid_header(const char *experiment_name, const char *out_fi
     if ( fclose(fp) ) fprintf(stderr, "Failed to close %s", out_file_name);
 }
 
+
 void vtk_append_double(const char *out_file_name, const char *var_name, int start_index,
                        int end_index, double *values) {
     int i;
@@ -185,6 +188,7 @@ void vtk_append_double(const char *out_file_name, const char *var_name, int star
 
     if ( fclose(fp) ) fprintf(stderr, "Failed to close %s", out_file_name);
 }
+
 
 void vtk_append_integer(const char *out_file_name, const char *var_name, int start_index,
                         int end_index, int *values) {
@@ -223,6 +227,7 @@ void vtk_for_process(const char *file_in, const char *file_vtk_out, int nintci, 
     printf("Data VTK file succesfully generated! \n");
 }
 
+
 void build_vtk_out_name(char *file_name, const char* file_in, char* part_type, char* read_type, int nprocs, int myrank,
         const char* out_dir, char* var_name, char* suffix) {
     //find base file name
@@ -233,6 +238,7 @@ void build_vtk_out_name(char *file_name, const char* file_in, char* part_type, c
             out_dir, var_name, data_file, part_type, read_type, suffix, nprocs, myrank);
     free(data_file);
 }
+
 
 //TODO:include all execution setup identifiers in the file name
 int vtk_check(char *file_in, char* part_type, char* read_type, int nprocs, int myrank,
@@ -291,6 +297,8 @@ int vtk_check(char *file_in, char* part_type, char* read_type, int nprocs, int m
             local_global_index, local_num_elems, scalars);
     return 0;
 }
+
+
 // FIXME: add an argument which says what we want to show(recv,send,both)
 void vtk_check_lists(char *file_in, int myrank,
         int *local_global_index, int local_num_elems,
@@ -376,6 +384,7 @@ void vtk_check_lists(char *file_in, int myrank,
 
     test_distribution(file_in, szFileName, local_global_index_big, local_num_elems_big, scalars);
 }
+
 
 void vtk_check_neighbour(char *file_in, int myrank,
         int *local_global_index, int local_num_elems,
@@ -468,6 +477,8 @@ int output_lcc(char* file_suffix, int myrank, int nintcf, int** lcc) {
     fclose(fp);
     return 0;
 }
+
+
 int ouput_b(char*file_suffix, int myrank, int nextcf, double *b_, char *b_name) {
     int i=0;
     char file_out[100];
@@ -484,6 +495,8 @@ int ouput_b(char*file_suffix, int myrank, int nextcf, double *b_, char *b_name) 
     fclose(fp);
     return 0;
 }
+
+
 int ouput_l2g_g2l(char* file_suffix, int myrank, int nelems, int* map, char* map_name) {
     int i=0;
     char file_out[100];
@@ -500,6 +513,8 @@ int ouput_l2g_g2l(char* file_suffix, int myrank, int nelems, int* map, char* map
     fclose(fp);
     return 0;
 }
+
+
 int write_lists(char* file_suffix, int myrank, int nghb_cnt, int *list_cnt, int** list, char *list_name) {
     int nghb_idx=0;
     int i=0;
@@ -521,6 +536,7 @@ int write_lists(char* file_suffix, int myrank, int nghb_cnt, int *list_cnt, int*
     fclose(fp);
     return 0;
 }
+
 
 int check_compute_arguments(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, int** lcc, double* bp,
                      double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
@@ -584,6 +600,7 @@ int check_compute_arguments(int nprocs, int myrank, const int max_iters, int nin
     return 0;
 }
 
+
 int check_compute_values(char *file_in, char* part_type, char* read_type, int nprocs, int myrank,
         int nintci, int nintcf, int nextcf, double omega, int nor,
         double *resvec, double *direc1, double *direc2, double *var,double* cnorm) {
@@ -613,6 +630,7 @@ int check_compute_values(char *file_in, char* part_type, char* read_type, int np
     fclose(fp);
     return 0;
 }
+
 
 int check_initialization_values(char* file_in, char* part_type, char* read_type, int nprocs, int myrank,
         int nintci_g, int nintcf_g, int nextci_g, int nextcf_g, int** lcc_g,

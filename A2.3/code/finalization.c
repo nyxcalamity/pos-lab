@@ -21,13 +21,12 @@ void finalization(char* file_in, int nprocs, int myrank, int total_iters, double
     
     //perform communication to exchange data
     if (myrank == 0) {
-        //FIXME:think of using one loop vs multiple loops
+        //TODO:analyze performance of this block, possibly create a single for loop
         //collect nintcf
         nintcf_g[0] = nintcf;
         for (proc=1; proc<nprocs; ++proc) {
             MPI_Recv(&nintcf_g[proc], 1, MPI_INT, proc, POSL_MPI_TAG_NINTCF, MPI_COMM_WORLD, &status);
         }
-//        printf("[DEBUG] Completed nintcf communication on task #%d\n", myrank);
         
         //init global var array
         if ((var_g = (double**) malloc(nprocs*sizeof(double*))) == NULL) {
@@ -42,9 +41,9 @@ void finalization(char* file_in, int nprocs, int myrank, int total_iters, double
         //collect var
         memcpy(var_g[0], var, (nintcf+1)*sizeof(double));
         for (proc=1; proc<nprocs; ++proc) {
-            MPI_Recv(var_g[proc], (nintcf_g[proc]+1), MPI_DOUBLE, proc, POSL_MPI_TAG_VAR, MPI_COMM_WORLD, &status);
+            MPI_Recv(var_g[proc], (nintcf_g[proc]+1), MPI_DOUBLE, proc, POSL_MPI_TAG_VAR, 
+                    MPI_COMM_WORLD, &status);
         }
-//        printf("[DEBUG] Completed var communication on task #%d\n", myrank);
         
         //init l2g_g
         if ((l2g_g = (int**) malloc(nprocs*sizeof(int*))) == NULL) {
@@ -59,9 +58,9 @@ void finalization(char* file_in, int nprocs, int myrank, int total_iters, double
         //collect l2g_g
         memcpy(l2g_g[0], local_global_index, (nintcf+1)*sizeof(int));
         for (proc=1; proc<nprocs; ++proc) {
-            MPI_Recv(l2g_g[proc], (nintcf_g[proc]+1), MPI_INT, proc, POSL_MPI_TAG_L2G, MPI_COMM_WORLD, &status);
+            MPI_Recv(l2g_g[proc], (nintcf_g[proc]+1), MPI_INT, proc, POSL_MPI_TAG_L2G, 
+                    MPI_COMM_WORLD, &status);
         }
-//        printf("[DEBUG] Completed l2g communication on task #%d\n", myrank);
         
         //count total number of cells
         ncells = 0;
@@ -81,15 +80,12 @@ void finalization(char* file_in, int nprocs, int myrank, int total_iters, double
     } else {
         //send nintcf
         MPI_Send(&nintcf, 1, MPI_INT, 0, POSL_MPI_TAG_NINTCF, MPI_COMM_WORLD);
-//        printf("[DEBUG] Completed nintcf communication on task #%d\n", myrank);
         
         //send var
         MPI_Send(var, nintcf+1, MPI_DOUBLE, 0, POSL_MPI_TAG_VAR, MPI_COMM_WORLD);
-//        printf("[DEBUG] Completed var communication on task #%d\n", myrank);
         
         //send l2g
         MPI_Send(local_global_index, nintcf+1, MPI_INT, 0, POSL_MPI_TAG_L2G, MPI_COMM_WORLD);
-//        printf("[DEBUG] Completed l2g communication on task #%d\n", myrank);
     }
 
     //perform stats printout
@@ -101,13 +97,12 @@ void finalization(char* file_in, int nprocs, int myrank, int total_iters, double
         
         
         //free memory
-        //FIXME: there's a bug with memory freeing, it doesn't work
-//        for (proc=0; proc<nprocs; ++i) {
-//            free(var_g[proc]);
-//            free(l2g_g[proc]);
-//        }
-//        free(var_g);
-//        free(l2g_g);
+        for (proc=0; proc<nprocs; ++proc) {
+            free(var_g[proc]);
+            free(l2g_g[proc]);
+        }
+        free(var_g);
+        free(l2g_g);
         free(var_cummulated);
     }
 }

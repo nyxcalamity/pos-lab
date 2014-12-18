@@ -61,9 +61,6 @@ void fill_l2g(int read_key, int myrank, int nproc, int nintcf,  int** local_glob
 
 /**
  * Counts the number of external cell for each process and change lcc to have indexes which are local
- *
- * FIXME: delete unused arguments + improve comments
- * FIXME: check on bad allocation
  */
 void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nintcf_g, int nextcf_g, 
         int* nintcf, int* nextcf, int*** lcc, int** local_global_index, int** global_local_index, 
@@ -72,8 +69,6 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
 
 /**
  * Sends and receives sizes of send list(which is equal to size of receive list) and allocate needed memory
- *
- * FIXME: improve comments
  */
 void allocate_send_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst, 
         int **recv_cnt);
@@ -81,8 +76,6 @@ void allocate_send_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** se
 
 /**
  * Send receive lists and get them in send lists.
- *
- * FIXME: better comment + delete unused arguments
  */
 void exchange_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst, 
         int **recv_cnt, int*** recv_lst);

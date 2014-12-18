@@ -17,9 +17,8 @@
 
 int main(int argc, char *argv[]) {
     int my_rank, num_procs, i;
-//FIXME: make it as it was
-//    const int max_iters = 10000;    /// maximum number of iteration to perform
-    const int max_iters = 1000;
+
+    const int max_iters = 10000;    /// maximum number of iteration to perform
 
     /** Simulation parameters parsed from the input datasets */
     int nintci, nintcf;    /// internal cells start and end index
@@ -107,18 +106,12 @@ int main(int argc, char *argv[]) {
     /********** END INITIALIZATION **********/
 
     /********** START COMPUTATIONAL LOOP **********/
-    //FIXME: delete file_in, points_count, pointes, elems, as arguments
-//    int total_iters = compute_solution(num_procs, my_rank, max_iters, nintci, nintcf, nextcf,
-//                    lcc, bp, bs, bw, bl, bn, be, bh,
-//                     cnorm, var, su, cgup, &residual_ratio,
-//                     local_global_index, global_local_index, nghb_cnt,
-//                     nghb_to_rank, send_cnt, send_lst, recv_cnt, recv_lst);
-    int total_iters = compute_solution(num_procs, my_rank, max_iters, nintci, nintcf, nextcf,
+    int total_iters = compute_solution(num_procs, my_rank, max_iters, nintci, nintcf, nextcf, 
                     lcc, bp, bs, bw, bl, bn, be, bh,
                      cnorm, var, su, cgup, &residual_ratio,
-                     local_global_index, global_local_index, nghb_cnt,
-                     nghb_to_rank, send_cnt, send_lst, recv_cnt, recv_lst,
-                     file_in, points_count, points, elems, part_type, read_type);
+                     local_global_index, global_local_index, nghb_cnt, 
+                     nghb_to_rank, send_cnt, send_lst, recv_cnt, recv_lst);
+
     /********** END COMPUTATIONAL LOOP **********/
 
     /********** START FINALIZATION **********/
@@ -168,4 +161,3 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-

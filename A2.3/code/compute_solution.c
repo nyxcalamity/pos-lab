@@ -10,21 +10,19 @@
 #include <math.h>
 #include <mpi.h>
 
-// FIXME: delete next line
-#include "util_write_files.h"
 
-// FIXME: bring it back!
-//int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, int** lcc, double* bp,
-//                     double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
-//                     double* cnorm, double* var, double *su, double* cgup, double* residual_ratio,
-//                     int* local_global_index, int* global_local_index, int nghb_cnt,
-//                     int* nghb_to_rank, int* send_cnt, int** send_lst, int *recv_cnt, int** recv_lst) {
 int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, int** lcc, double* bp,
                      double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
                      double* cnorm, double* var, double *su, double* cgup, double* residual_ratio,
-                     int* local_global_index, int* global_local_index, int nghb_cnt, 
-                     int* nghb_to_rank, int* send_cnt, int** send_lst, int *recv_cnt, int** recv_lst,
-                     char *file_in, int points_count, int **points, int *elems, char* part_type, char* read_type) {
+                     int* local_global_index, int* global_local_index, int nghb_cnt,
+                     int* nghb_to_rank, int* send_cnt, int** send_lst, int *recv_cnt, int** recv_lst) {
+// FIXME: delete
+//int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, int** lcc, double* bp,
+//                     double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
+//                     double* cnorm, double* var, double *su, double* cgup, double* residual_ratio,
+//                     int* local_global_index, int* global_local_index, int nghb_cnt, 
+//                     int* nghb_to_rank, int* send_cnt, int** send_lst, int *recv_cnt, int** recv_lst,
+//                     char *file_in, int points_count, int **points, int *elems, char* part_type, char* read_type) {
 //    check_compute_arguments(nprocs, myrank, max_iters, nintci, nintcf, nextcf,
 //                        lcc, bp, bs, bw, bl, bn, be, bh,
 //                         cnorm, var, su, cgup, residual_ratio,
@@ -141,8 +139,6 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         /** STOP Exchange of direc1 with MPI **/
         // compute new guess (approximation) for direc
         for ( nc = nintci; nc <= nintcf; nc++ ) {
-//FIXME:            if(local_global_index[nc]==36507)
-//FIXME:                printf("direc2=%.15lf,resvec=%.15lf,cgup=%.15lf\n",direc2[nc],resvec[nc],cgup[nc]);
             direc2[nc] = bp[nc] * direc1[nc] - bs[nc] * direc1[lcc[nc][0]]
                          - be[nc] * direc1[lcc[nc][1]] - bn[nc] * direc1[lcc[nc][2]]
                          - bw[nc] * direc1[lcc[nc][3]] - bl[nc] * direc1[lcc[nc][4]]
@@ -203,7 +199,6 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
                 if2++;
             }
         }
-//FIXME:        printf("i%d,r%d,occ=%.15lf\n",iter,myrank,occ);
 
         // compute the new residual
         cnorm[nor] = 0;
@@ -229,7 +224,6 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
             res_updated = res_updated + resvec[nc] * resvec[nc];
             var[nc] = var[nc] + omega * direc1[nc];
         }
-//FIXME:        printf("r%d, omega=%.20lf\n",myrank, omega);
         MPI_Allreduce(&res_updated, &res_updated_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         res_updated = res_updated_g;
         res_updated = sqrt(res_updated);
@@ -262,15 +256,13 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         }
         nor1 = nor - 1;
         /********** END COMP PHASE 2 **********/
-        if (iter==max_iters) {
-            check_compute_values(file_in, part_type, read_type, nprocs, myrank,
-                    nintci, nintcf, nextcf, omega, nor,
-                    resvec, direc1, direc2, var, cnorm);
-        }
+        //FIXME:should this code stay?
+//        if (iter==max_iters) {
+//            check_compute_values(file_in, part_type, read_type, nprocs, myrank,
+//                    nintci, nintcf, nextcf, omega, nor,
+//                    resvec, direc1, direc2, var, cnorm);
+//        }
     }
-//    FIXME: delete
-//    vtk_check(file_in, part_type, read_type, nprocs, myrank, nintci, nintcf, resvec, direc1, direc2, var, points_count, points,
-//                    elems, local_global_index, (nintcf-nintci+1));
 
     free(direc1);
     free(direc2);
@@ -279,6 +271,8 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     free(dxor1);
     free(dxor2);
     free(resvec);
+    
     printf("[INFO] Completed compute_solution on task #%d\n", myrank);
+    
     return iter;
 }

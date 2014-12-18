@@ -27,8 +27,6 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     int input_key, part_key, read_key;
     process_cl(file_in, part_type, read_type, &input_key, &part_key, &read_key);
     /********** START INITIALIZATION **********/
-    //FIXME:delete
-    int m, n;
     //TODO:optimize inits and var names
     // Used by metis function(gives us information to which process belongs our cell)
     int *partitioning_map, i=0;
@@ -172,12 +170,6 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
                         *local_global_index, (*nintcf-*nintci+1),
                         *nghb_cnt, *nghb_to_rank, *send_cnt, *send_lst,
                         *recv_cnt, *recv_lst, OUTPUT_VTK, VTK_NEIGHBOUR);
-//        FIXME: delete
-//        char szFileName[80];
-//        sprintf(szFileName, "%s%s.receive.rank%i.vtk", "out/", "test", myrank);
-//        test_distribution(file_in, szFileName, (*recv_lst)[0], (*recv_cnt)[0], *cgup);
-//        sprintf(szFileName, "%s%s.send.rank%i.vtk", "out/", "test", myrank);
-//        test_distribution(file_in, szFileName, (*send_lst)[0], (*send_cnt)[0], *cgup);
     }
     //TODO:externalize error checking
     if (f_status != 0){

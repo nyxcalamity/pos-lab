@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <mpich/mpi.h>
+#include <mpi.h>
 #include <string.h>
 #include "util_write_files.h"
 #include "posl_definitions.h"

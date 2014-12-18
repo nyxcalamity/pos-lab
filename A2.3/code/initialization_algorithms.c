@@ -508,7 +508,6 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
         }
     }
     // Allocate and fill recv_cnt and recv_lst with global lcc indexing for further use
-    // FIXME: is this good allocation?
     *recv_cnt = (int*) calloc(sizeof(int), *nghb_cnt);
     for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {
         (*recv_cnt)[nghb_idx] = tmp_recv_cnt[ (*nghb_to_rank)[nghb_idx] ];

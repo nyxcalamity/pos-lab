@@ -83,11 +83,11 @@ int vtk_check(char *file_in, char* part_type, char* read_type, int nprocs, int m
         int points_count, int **points,  int *elems, int *local_global_index, int local_num_elems);
 
 
-// FIXME: add comments
 void vtk_check_lists(char *file_in, int myrank,
         int *local_global_index, int local_num_elems,
         int nghb_cnt, int* nghb_to_rank, int* send_cnt, int** send_lst,
         int *recv_cnt, int** recv_lst, int output_style);
+
 
 void vtk_check_neighbour(char *file_in, int myrank,
         int *local_global_index, int local_num_elems,

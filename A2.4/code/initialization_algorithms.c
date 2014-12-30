@@ -55,9 +55,9 @@ void bcast_partitioning(int read_key, int myrank, int **partitioning_map, int *n
 
 
 int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g, 
-        int nintcf_g, int nextci_g, int nextcf_g,
-        int **lcc_g, int points_count_g, int **points_g, int *elems_g, int *int_cells_per_proc,
-        int **partitioning_map) {
+        int nintcf_g, int nextci_g, int nextcf_g, int *nintci, int *nintcf, int *nextci, int *nextcf, 
+        int **lcc_g, int points_count_g, int **points_g, int *elems_g, int *int_cells_per_proc, 
+        int *extcell_per_proc, int **local_global_index_g, int **local_global_index, int **partitioning_map) {
     int i=0;
     idx_t nelems, nnodes, ncommon, nparts, objval;
     idx_t *elem_ptr, *elem_idx, *elem_part, *node_part;
@@ -66,9 +66,12 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
     *partitioning_map = (int *) calloc(sizeof(int), (nintcf_g-nintci_g+1));
     
     if (((read_key == POSL_INIT_ONE_READ) && (myrank == 0)) || (read_key == POSL_INIT_ALL_READ)) {
+        *nintci = 0; *nintcf = 0;
         if (part_key == POSL_PARTITIONING_CLASSIC) {
             //the last processor always gets different number of cells
             int elem_per_proc = (nelems+(nprocs-1))/nprocs;
+            *nextci = (myrank == nprocs-1) ? nelems-(nprocs-1)*elem_per_proc : elem_per_proc;
+            *nintcf = *nextci-1;
             
             //build global cell allocation
             if (read_key == POSL_INIT_ONE_READ) {
@@ -84,7 +87,7 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
         } else {
             //initialize variables for metis
             nnodes = points_count_g;
-            //FIXME:perform a proper constant externalization
+            //TODO:perform a proper constant externalization
             ncommon = 4;
             nparts = nprocs;
             elem_ptr = (idx_t *) calloc(nelems+1, sizeof(idx_t));
@@ -119,13 +122,23 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
                 }
             }
             
+            //TODO: consider performance gains when if statement is outside of the loop
             //compute position of last internal cell
             for (i=0; i<nelems; i++) {
                 if (read_key == POSL_INIT_ONE_READ) {
                     int_cells_per_proc[(*partitioning_map)[i]] += 1;
+                } else {
+                    if (myrank == (*partitioning_map)[i]) {
+                        (*nintcf) += 1;
+                    }
                 }
             }
             
+            //assign local internal cell ending idx
+            if (read_key == POSL_INIT_ONE_READ) {
+                *nintcf = int_cells_per_proc[myrank];
+            }
+            *nextci = (*nintcf)--;
         }
     }
     return 0;
@@ -190,8 +203,9 @@ int fill_lcc_elems_points(int read_key, int myrank, int nprocs, int nintci, int 
         int points_count, int** points, int* elems, int *local_global_index,  int **local_global_index_g,
         int **lcc_g, int points_count_g, int** points_g, int **elems_g, int *int_cells_per_proc) {
     int proc=0, i=0;
-    int *buff;
     MPI_Status status;
+    MPI_Datatype index_type;
+    
     if (read_key == POSL_INIT_ONE_READ) {
         if (myrank == 0) {
             for (proc=1; proc<nprocs; ++proc) {
@@ -204,24 +218,17 @@ int fill_lcc_elems_points(int read_key, int myrank, int nprocs, int nintci, int 
                     MPI_Send(points_g[i], 3, MPI_INT, proc, POSL_MPI_TAG_POINTS, MPI_COMM_WORLD);
                 }
                 
-                //TODO:Use MPI custom data types (indexing))
-                //allocate proper buffer memory
-                if ((buff = (int *) malloc(int_cells_per_proc[proc]*8*sizeof(int))) == NULL) {
-                    fprintf(stderr, "malloc() element buffer allocation failed\n");
-                    return -1;
-                }
-                
-                //fill the buffer
+                //create and register new datatype within mpi
+                int mpi_block_length[int_cells_per_proc[proc]], mpi_displacements[int_cells_per_proc[proc]];
                 for (i=0; i<int_cells_per_proc[proc]; ++i) {
-                    memcpy(&(buff[8*i]), &((*elems_g)[8*local_global_index_g[proc][i]]), 8*sizeof(int));
+                    mpi_block_length[i] = 8;
+                    mpi_displacements[i] = 8*local_global_index_g[proc][i];
                 }
-                                
-                //send the elements
-                MPI_Send(buff, int_cells_per_proc[proc]*8, MPI_INT, proc, POSL_MPI_TAG_ELEMENTS, 
-                        MPI_COMM_WORLD);
+                MPI_Type_indexed(int_cells_per_proc[proc], mpi_block_length, mpi_displacements, 
+                        MPI_INT, &index_type);
+                MPI_Type_commit(&index_type);
                 
-                //free buffer memory
-                free(buff);
+                MPI_Send(*(elems_g), 1, index_type, proc, POSL_MPI_TAG_ELEMENTS, MPI_COMM_WORLD);
             }
         } else {
             for (i=nintci; i<nintcf+1; ++i) {
@@ -290,87 +297,41 @@ int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nin
         double **be_g, double **bn_g, double **bw_g, double **bl_g, double **bh_g, double **bp_g, 
         double **su_g, int *int_cells_per_proc) {
     int proc=0, i=0;
-    double *buf_bs, *buf_be, *buf_bn, *buf_bw, *buf_bl, *buf_bh, *buf_bp, *buf_su;
     MPI_Status status;
+    MPI_Datatype index_type;
+    
     if (read_key == POSL_INIT_ONE_READ) {
         if (myrank == 0) {
             for (proc=1; proc<nprocs; ++proc) {
-                //allocate buffers
-                if ((buf_bs = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-                if ((buf_be = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-                if ((buf_bn = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-                if ((buf_bw = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-                if ((buf_bl = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-                if ((buf_bh = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-                if ((buf_bp = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-                if ((buf_su = (double *) malloc(int_cells_per_proc[proc]*sizeof(double))) == NULL) {
-                    printf("malloc() b value failed\n");
-                    return -1;
-                }
-
-                //fill in buffer data
+                //create and register new datatype within mpi
+                int mpi_block_length[int_cells_per_proc[proc]], mpi_displacements[int_cells_per_proc[proc]];
                 for (i=0; i<int_cells_per_proc[proc]; ++i) {
-                    buf_bs[i] = (*bs_g)[local_global_index_g[proc][i]];
-                    buf_be[i] = (*be_g)[local_global_index_g[proc][i]];
-                    buf_bn[i] = (*bn_g)[local_global_index_g[proc][i]];
-                    buf_bw[i] = (*bw_g)[local_global_index_g[proc][i]];
-                    buf_bl[i] = (*bl_g)[local_global_index_g[proc][i]];
-                    buf_bh[i] = (*bh_g)[local_global_index_g[proc][i]];
-                    buf_bp[i] = (*bp_g)[local_global_index_g[proc][i]];
-                    buf_su[i] = (*su_g)[local_global_index_g[proc][i]];
+                    mpi_block_length[i] = 1;
+                    mpi_displacements[i] = local_global_index_g[proc][i];
                 }
+                MPI_Type_indexed(int_cells_per_proc[proc], mpi_block_length, mpi_displacements, 
+                        MPI_DOUBLE, &index_type);
+                MPI_Type_commit(&index_type);
                 
                 //send the data
-                //FIXME: externalize mpi tags
-                MPI_Send(buf_bs, int_cells_per_proc[proc], MPI_DOUBLE, proc, 101, MPI_COMM_WORLD);
-                MPI_Send(buf_be, int_cells_per_proc[proc], MPI_DOUBLE, proc, 102, MPI_COMM_WORLD);
-                MPI_Send(buf_bn, int_cells_per_proc[proc], MPI_DOUBLE, proc, 103, MPI_COMM_WORLD);
-                MPI_Send(buf_bw, int_cells_per_proc[proc], MPI_DOUBLE, proc, 104, MPI_COMM_WORLD);
-                MPI_Send(buf_bl, int_cells_per_proc[proc], MPI_DOUBLE, proc, 105, MPI_COMM_WORLD);
-                MPI_Send(buf_bh, int_cells_per_proc[proc], MPI_DOUBLE, proc, 106, MPI_COMM_WORLD);
-                MPI_Send(buf_bp, int_cells_per_proc[proc], MPI_DOUBLE, proc, 107, MPI_COMM_WORLD);
-                MPI_Send(buf_su, int_cells_per_proc[proc], MPI_DOUBLE, proc, 108, MPI_COMM_WORLD);
-                
-                //free buffer memory
-                free(buf_bs);
-                free(buf_be);
-                free(buf_bn);
-                free(buf_bw);
-                free(buf_bl);
-                free(buf_bh);
-                free(buf_bp);
-                free(buf_su);
+                MPI_Send(*(bs_g), 1, index_type, proc, POSL_MPI_TAG_BS, MPI_COMM_WORLD);
+                MPI_Send(*(be_g), 1, index_type, proc, POSL_MPI_TAG_BE, MPI_COMM_WORLD);
+                MPI_Send(*(bn_g), 1, index_type, proc, POSL_MPI_TAG_BN, MPI_COMM_WORLD);
+                MPI_Send(*(bw_g), 1, index_type, proc, POSL_MPI_TAG_BW, MPI_COMM_WORLD);
+                MPI_Send(*(bl_g), 1, index_type, proc, POSL_MPI_TAG_BL, MPI_COMM_WORLD);
+                MPI_Send(*(bh_g), 1, index_type, proc, POSL_MPI_TAG_BH, MPI_COMM_WORLD);
+                MPI_Send(*(bp_g), 1, index_type, proc, POSL_MPI_TAG_BP, MPI_COMM_WORLD);
+                MPI_Send(*(su_g), 1, index_type, proc, POSL_MPI_TAG_SU, MPI_COMM_WORLD);
             }
         } else {
-            MPI_Recv(bs, (nintcf+1), MPI_DOUBLE, 0, 101, MPI_COMM_WORLD, &status);
-            MPI_Recv(be, (nintcf+1), MPI_DOUBLE, 0, 102, MPI_COMM_WORLD, &status);
-            MPI_Recv(bn, (nintcf+1), MPI_DOUBLE, 0, 103, MPI_COMM_WORLD, &status);
-            MPI_Recv(bw, (nintcf+1), MPI_DOUBLE, 0, 104, MPI_COMM_WORLD, &status);
-            MPI_Recv(bl, (nintcf+1), MPI_DOUBLE, 0, 105, MPI_COMM_WORLD, &status);
-            MPI_Recv(bh, (nintcf+1), MPI_DOUBLE, 0, 106, MPI_COMM_WORLD, &status);
-            MPI_Recv(bp, (nintcf+1), MPI_DOUBLE, 0, 107, MPI_COMM_WORLD, &status);
-            MPI_Recv(su, (nintcf+1), MPI_DOUBLE, 0, 108, MPI_COMM_WORLD, &status);
+            MPI_Recv(bs, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_BS, MPI_COMM_WORLD, &status);
+            MPI_Recv(be, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_BE, MPI_COMM_WORLD, &status);
+            MPI_Recv(bn, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_BN, MPI_COMM_WORLD, &status);
+            MPI_Recv(bw, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_BW, MPI_COMM_WORLD, &status);
+            MPI_Recv(bl, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_BL, MPI_COMM_WORLD, &status);
+            MPI_Recv(bh, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_BH, MPI_COMM_WORLD, &status);
+            MPI_Recv(bp, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_BP, MPI_COMM_WORLD, &status);
+            MPI_Recv(su, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_SU, MPI_COMM_WORLD, &status);
         }
     }
     if (read_key == POSL_INIT_ALL_READ || (read_key == POSL_INIT_ONE_READ && myrank ==0)) {
@@ -389,14 +350,25 @@ int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nin
 }
 
 
-void fill_l2g(int read_key, int myrank, int nproc,
+void fill_l2g(int read_key, int myrank, int nproc, int nintcf, int** local_global_index, 
         int ***local_global_index_g, int *partitioning_map, int nelems_g, int *int_cells_per_proc) {
     int i=0, local_idx=0, current_proc=0;
+    if ((*local_global_index = (int *) malloc(((nintcf)+1)*sizeof(int))) == NULL) {
+        //TODO:handle this error
+        fprintf(stderr, "malloc(local_global_index) failed\n");
+    }
+
+    for (i=0; i<nelems_g; ++i) {
+        if (partitioning_map[i] == myrank) {
+            (*local_global_index)[local_idx] = i;
+            ++local_idx;
+        }
+    }
     
     //TODO:refactor code to reduce duplicates
     //in addition build global global to local if applicable
     if (read_key == POSL_INIT_ONE_READ && myrank == 0) {        
-        //FIXME:handle memory allocation errors
+        //TODO:handle memory allocation errors
         if ((*local_global_index_g = (int**) malloc(nproc*sizeof(int*))) == NULL){
             fprintf(stderr, "malloc failed to allocate first dimension of l2g_g");
         }
@@ -449,7 +421,7 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
 
     if ((*global_local_index = (int *) malloc((nextcf_g+1)*sizeof(int))) == NULL) {
         fprintf(stderr, "malloc(global_local_index) in build_lists_g2l_next failed\n");
-        //FIXME:handle this error
+        //TODO:handle this error
     }
     // We will fill whole g2l by -1 for easier debugging
     for (i=0; i<=nextcf_g; ++i) {
@@ -527,7 +499,7 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
     // Allocate and fill nhb_to_rank
     if ((*nghb_to_rank = (int *) malloc((*nghb_cnt)*sizeof(int))) == NULL) {
         fprintf(stderr, "malloc(nghb_to_rank) in build_lists_g2l_next failed\n");
-        //FIXME:handle this error
+        //TODO:handle this error
     }
     for (proc=0;proc<nprocs; ++proc) {
         if(tmp_recv_cnt[proc] !=0) {
@@ -536,7 +508,6 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
         }
     }
     // Allocate and fill recv_cnt and recv_lst with global lcc indexing for further use
-    // FIXME: is this good allocation?
     *recv_cnt = (int*) calloc(sizeof(int), *nghb_cnt);
     for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {
         (*recv_cnt)[nghb_idx] = tmp_recv_cnt[ (*nghb_to_rank)[nghb_idx] ];

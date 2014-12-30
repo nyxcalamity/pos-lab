@@ -78,27 +78,46 @@ void vtk_for_process(const char *file_in, const char *file_vtk_out,
 		int *local_global_index, int local_num_elems, double *scalars);
 
 
-int vtk_check(char *file_in, int myrank,
+int vtk_check(char *file_in, char* part_type, char* read_type, int nprocs, int myrank,
         int nintci, int nintcf, double *resvec, double *direc1, double *direc2, double *var,
-		int points_count, int **points,  int *elems,
-		int *local_global_index, int local_num_elems);
+        int points_count, int **points,  int *elems, int *local_global_index, int local_num_elems);
 
 
-// FIXME: comments
 void vtk_check_lists(char *file_in, int myrank,
         int *local_global_index, int local_num_elems,
         int nghb_cnt, int* nghb_to_rank, int* send_cnt, int** send_lst,
         int *recv_cnt, int** recv_lst, int output_style);
+
 
 void vtk_check_neighbour(char *file_in, int myrank,
         int *local_global_index, int local_num_elems,
         int nghb_cnt, int* nghb_to_rank, int* send_cnt, int** send_lst,
         int *recv_cnt, int** recv_lst, int output_style, int neighbour);
 
+
+int check_compute_arguments(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, int** lcc, double* bp,
+                     double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
+                     double* cnorm, double* var, double *su, double* cgup, double* residual_ratio,
+                     int* local_global_index, int* global_local_index, int nghb_cnt,
+                     int* nghb_to_rank, int* send_cnt, int** send_lst, int *recv_cnt, int** recv_lst,
+                     char *file_in, int points_count, int **points, int *elems, char* part_type, char* read_type);
+
+
 int check_compute_values(char *file_in, char* part_type, char* read_type, int nprocs, int myrank,
         int nintci, int nintcf, int nextcf, double omega, int nor,
-        double *resvec, double *direc1, double *direc2, double *var,double* cnorm,
-        int **l2g_g, int *int_cells_per_proc);
+        double *resvec, double *direc1, double *direc2, double *var,double* cnorm);
+
+
+int check_initialization_values(char* file_in, char* part_type, char* read_type, int nprocs, int myrank,
+        int nintci_g, int nintcf_g, int nextci_g, int nextcf_g, int** lcc_g,
+        int nintci, int nintcf, int nextci, int nextcf, int** lcc,
+        double* bs, double* be, double* bn, double* bw, double* bl, double* bh, double* bp, double* su,
+        int* points_count, int** points, int* elems,
+        double* var, double* cgup, double* oc, double* cnorm,
+        int* local_global_index, int* global_local_index,
+        int nghb_cnt, int* nghb_to_rank,
+        int* send_cnt, int** send_lst,  int *recv_cnt, int** recv_lst,
+        int *partitioning_map, int write_me);
 // end_of_student_code-----------------------------------------------------------------------------------
 #endif /* XWRITE_H_ */
 

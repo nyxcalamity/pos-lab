@@ -1,12 +1,9 @@
 ####################################################################
-#                                                                  #
 #             Makefile for FIRE Solver Benchmarks                  #
-#                                                                  #
 ####################################################################
-
 CC = mpicc
-CFLAGS = -Wall -g -O0 
-LIBS = -lm
+CFLAGS = -g -O0 -Wall
+LIBS = -lm #-lmetis -lpapi
 
 CFLAGS += $(METIS_INC) $(PAPI_INC)
 LIBS += $(METIS_LIB) $(PAPI_LIB)
@@ -37,4 +34,4 @@ clean: clean-data
 	rm -rf *.o gccg $(LIBPOS)
 
 clean-data:
-	rm -rf out/* *.dat
+	rm -rf out/* *.dat data/*.out

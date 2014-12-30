@@ -12,6 +12,7 @@
 #include "test_functions.h"
 #include "posl_definitions.h"
 
+
 int store_simulation_stats(char *in_file_name, char *out_file_name, int nintci, int nintcf,
                            double *var, int total_iters, double residual_ratio) {
     double *points = (double *) malloc((nintcf + 1) * sizeof(double));
@@ -97,6 +98,7 @@ int store_simulation_stats(char *in_file_name, char *out_file_name, int nintci, 
     return 0;
 }
 
+
 void vtk_write_unstr_grid_header(const char *experiment_name, const char *out_file_name,
                                  int start_index, int end_index, int points_count, int **points,
                                  int *elems) {
@@ -161,6 +163,7 @@ void vtk_write_unstr_grid_header(const char *experiment_name, const char *out_fi
     if ( fclose(fp) ) fprintf(stderr, "Failed to close %s", out_file_name);
 }
 
+
 void vtk_append_double(const char *out_file_name, const char *var_name, int start_index,
                        int end_index, double *values) {
     int i;
@@ -185,6 +188,7 @@ void vtk_append_double(const char *out_file_name, const char *var_name, int star
 
     if ( fclose(fp) ) fprintf(stderr, "Failed to close %s", out_file_name);
 }
+
 
 void vtk_append_integer(const char *out_file_name, const char *var_name, int start_index,
                         int end_index, int *values) {
@@ -224,68 +228,77 @@ void vtk_for_process(const char *file_in, const char *file_vtk_out, int nintci, 
 }
 
 
-//TODO:include all execution setup identifiers in the file name
-int vtk_check(char *file_in, int myrank, int nintci, int nintcf, double *resvec, double *direc1, double *direc2, double *var,
-        int points_count, int **points,  int *elems, int *local_global_index, int local_num_elems) {
-    char szFileName[80];
-    int i=0;
-    local_global_index = (int *) malloc(((nintcf)+1)*sizeof(int));
-    for(i = 0; i<nintcf+1; ++i) {
-        local_global_index[i]=i;
-    }
-    double *scalars;
-    //TODO:externalize this string
-    const char *kOutputDirectoryName = "./out/";
-    
+void build_vtk_out_name(char *file_name, const char* file_in, char* part_type, char* read_type, int nprocs, int myrank,
+        const char* out_dir, char* var_name, char* suffix) {
     //find base file name
     char *data_file = strrchr(file_in,'/')+1;
     //strip data file base name
     data_file = strndup(data_file, strchr(data_file, '.')-data_file);
+    sprintf(file_name, "./%s/%s.%s.%s.%s%s.%d-%d.vtk",
+            out_dir, var_name, data_file, part_type, read_type, suffix, nprocs, myrank);
+    free(data_file);
+}
+
+
+//TODO:include all execution setup identifiers in the file name
+int vtk_check(char *file_in, char* part_type, char* read_type, int nprocs, int myrank,
+        int nintci, int nintcf, double *resvec, double *direc1, double *direc2, double *var,
+        int points_count, int **points,  int *elems, int *local_global_index, int local_num_elems) {
+    char file_name[80];
+    int i=0;
+    double *scalars;
+    //TODO:externalize this string
+    const char *out_dir = "out";
+    char var_name[80];
     
     if ((scalars = (double *) malloc((nintcf+1)*sizeof(double))) == NULL) {
         fprintf(stderr, "malloc(local_global_index) failed\n");
         return -1;
     }
     // Output resvec
+    sprintf(var_name, "%s", "resvec");
     for (i=0; i<local_num_elems; i++){
         scalars[i] = resvec[i];
     }
-    sprintf(szFileName, "%s%s.resvec.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
-    test_distribution(file_in, szFileName, local_global_index, local_num_elems, scalars);
-    sprintf(szFileName, "%s%s.resvec.cutted.rank%i.vtk", kOutputDirectoryName,data_file, myrank);
-    vtk_for_process(file_in, szFileName, 0, local_num_elems-1, points_count, points, elems,
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, "");
+    test_distribution(file_in, file_name, local_global_index, local_num_elems, scalars);
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, ".cut");
+    vtk_for_process(file_in, file_name, 0, local_num_elems-1, points_count, points, elems,
             local_global_index, local_num_elems, scalars);
-    // Output CGUP
-    for (i=0; i<local_num_elems; i++){
-        scalars[i] = direc2[i];
-    }
-    sprintf(szFileName, "%s%s.direc2.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
-    test_distribution(file_in, szFileName, local_global_index, local_num_elems, scalars);
-//    sprintf(szFileName, "%s%s.direc2.cutted.rank%i.vtk", kOutputDirectoryName,data_file, myrank);
-//    vtk_for_process(file_in, szFileName, 0, local_num_elems-1, points_count, points, elems,
-//            local_global_index, local_num_elems, scalars);
-    // Output SU
+    // Output direc1
+    sprintf(var_name, "%s", "direc1");
     for (i=0; i<local_num_elems; i++){
         scalars[i] = direc1[i];
     }
-    sprintf(szFileName, "%s%s.direc1.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
-    test_distribution(file_in, szFileName, local_global_index, local_num_elems, scalars);
-//    sprintf(szFileName, "%s%s.direc1.cutted.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
-//    vtk_for_process(file_in, szFileName, 0, local_num_elems-1, points_count, points, elems,
-//            local_global_index, local_num_elems, scalars);
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, "");
+    test_distribution(file_in, file_name, local_global_index, local_num_elems, scalars);
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, ".cut");
+    vtk_for_process(file_in, file_name, 0, local_num_elems-1, points_count, points, elems,
+            local_global_index, local_num_elems, scalars);
+    // Output direc2
+    sprintf(var_name, "%s", "direc2");
+    for (i=0; i<local_num_elems; i++){
+        scalars[i] = direc2[i];
+    }
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, "");
+    test_distribution(file_in, file_name, local_global_index, local_num_elems, scalars);
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, ".cut");
+    vtk_for_process(file_in, file_name, 0, local_num_elems-1, points_count, points, elems, 
+            local_global_index, local_num_elems, scalars);
     // Output VAR
+    sprintf(var_name, "%s", "var");
     for (i=0; i<local_num_elems; i++){
         scalars[i] = var[i];
     }
-    sprintf(szFileName, "%s%s.var.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
-    test_distribution(file_in, szFileName, local_global_index, local_num_elems, scalars);
-//    sprintf(szFileName, "%s%s.var.cutted.rank%i.vtk", kOutputDirectoryName, data_file, myrank);
-//    vtk_for_process(file_in, szFileName, 0, local_num_elems-1, points_count, points, elems,
-//            local_global_index, local_num_elems, scalars);
-    free(data_file);
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, "");
+    test_distribution(file_in, file_name, local_global_index, local_num_elems, scalars);
+    build_vtk_out_name(file_name, file_in, part_type, read_type, nprocs, myrank, out_dir, var_name, ".cut");
+    vtk_for_process(file_in, file_name, 0, local_num_elems-1, points_count, points, elems,
+            local_global_index, local_num_elems, scalars);
     return 0;
 }
-// FIXME: add an argument which says what we want to show(recv,send,both)
+
+
 void vtk_check_lists(char *file_in, int myrank,
         int *local_global_index, int local_num_elems,
         int nghb_cnt, int* nghb_to_rank, int* send_cnt, int** send_lst,
@@ -370,6 +383,7 @@ void vtk_check_lists(char *file_in, int myrank,
 
     test_distribution(file_in, szFileName, local_global_index_big, local_num_elems_big, scalars);
 }
+
 
 void vtk_check_neighbour(char *file_in, int myrank,
         int *local_global_index, int local_num_elems,
@@ -462,6 +476,8 @@ int output_lcc(char* file_suffix, int myrank, int nintcf, int** lcc) {
     fclose(fp);
     return 0;
 }
+
+
 int ouput_b(char*file_suffix, int myrank, int nextcf, double *b_, char *b_name) {
     int i=0;
     char file_out[100];
@@ -478,6 +494,8 @@ int ouput_b(char*file_suffix, int myrank, int nextcf, double *b_, char *b_name) 
     fclose(fp);
     return 0;
 }
+
+
 int ouput_l2g_g2l(char* file_suffix, int myrank, int nelems, int* map, char* map_name) {
     int i=0;
     char file_out[100];
@@ -494,6 +512,8 @@ int ouput_l2g_g2l(char* file_suffix, int myrank, int nelems, int* map, char* map
     fclose(fp);
     return 0;
 }
+
+
 int write_lists(char* file_suffix, int myrank, int nghb_cnt, int *list_cnt, int** list, char *list_name) {
     int nghb_idx=0;
     int i=0;
@@ -517,12 +537,72 @@ int write_lists(char* file_suffix, int myrank, int nghb_cnt, int *list_cnt, int*
 }
 
 
+int check_compute_arguments(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, int** lcc, double* bp,
+                     double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
+                     double* cnorm, double* var, double *su, double* cgup, double* residual_ratio,
+                     int* local_global_index, int* global_local_index, int nghb_cnt,
+                     int* nghb_to_rank, int* send_cnt, int** send_lst, int *recv_cnt, int** recv_lst,
+                     char *file_in, int points_count, int **points, int *elems, char* part_type, char* read_type){
+    int nghb_idx = 0;
+    char file_out[100];
+    char file_suffix[100];
+    char out_folder[]="output";
+    //find base file name
+    char *data_file = strrchr(file_in,'/')+1;
+    //strip data file base name
+    data_file = strndup(data_file, strchr(data_file, '.')-data_file);
+    sprintf(file_suffix, "%s.%s-%s.%d.out",data_file,part_type,read_type,myrank);
+    sprintf(file_out,"./%s/%s", out_folder, file_suffix);
+    FILE *fp = fopen(file_out, "w");
+    if ( fp == NULL ) {
+        fprintf(stderr, "Error opening file %s for writing\n", file_out);
+        return -1;
+    }
+    // Write data
+    fprintf(fp, "nprocs=%d\n", nprocs);
+    fprintf(fp, "nintci=%d, nintcf=%d, nextcf=%d\n",nintci,nintcf,nextcf);
+    fprintf(fp, "nghb_cnt=%d\n", nghb_cnt);
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        fprintf(fp, "nghb_to_rank[%d]=%d", nghb_idx, nghb_to_rank[nghb_idx]);
+    }
+    fprintf(fp, "\n");
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        fprintf(fp, "send_cnt[%d]=%d", nghb_idx, send_cnt[nghb_idx]);
+    }
+    fprintf(fp, "\n");
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        fprintf(fp, "recv_cnt[%d]=%d", nghb_idx, recv_cnt[nghb_idx]);
+    }
+    fprintf(fp, "\n");
+
+    output_lcc(file_suffix, myrank, nintcf, lcc);
+
+    ouput_b(file_suffix, myrank, nextcf, bp, "bp");
+    ouput_b(file_suffix, myrank, nextcf, bs, "bs");
+    ouput_b(file_suffix, myrank, nextcf, bw, "bw");
+    ouput_b(file_suffix, myrank, nextcf, bl, "bl");
+    ouput_b(file_suffix, myrank, nextcf, bn, "bn");
+    ouput_b(file_suffix, myrank, nextcf, be, "be");
+    ouput_b(file_suffix, myrank, nextcf, bh, "bh");
+    ouput_b(file_suffix, myrank, nextcf, su, "su");
+
+    ouput_b(file_suffix, myrank, nintcf, cnorm, "cnorm");
+    ouput_b(file_suffix, myrank, nextcf, var, "var");
+    ouput_b(file_suffix, myrank, nextcf, cgup, "cgup");
+
+    ouput_l2g_g2l(file_suffix, myrank, nintcf+1, local_global_index, "l2g");
+    ouput_l2g_g2l(file_suffix, myrank, nextcf+1, global_local_index, "g2l");
+
+    write_lists(file_suffix, myrank, nghb_cnt, send_cnt, send_lst, "send");
+    write_lists(file_suffix, myrank, nghb_cnt, recv_cnt, recv_lst, "recv");
+    fclose(fp);
+    return 0;
+}
+
+
 int check_compute_values(char *file_in, char* part_type, char* read_type, int nprocs, int myrank,
         int nintci, int nintcf, int nextcf, double omega, int nor,
-        double *resvec, double *direc1, double *direc2, double *var,double* cnorm,
-        int **l2g_g, int *int_cells_per_proc) {
-    int rank =0, i=0;
-    double *var_buff;
+        double *resvec, double *direc1, double *direc2, double *var,double* cnorm) {
     char file_suffix[100];
     char file_out[100];
     char out_folder[]="output";
@@ -530,47 +610,93 @@ int check_compute_values(char *file_in, char* part_type, char* read_type, int np
     char *data_file = strrchr(file_in,'/')+1;
     //strip data file base name
     data_file = strndup(data_file, strchr(data_file, '.')-data_file);
-    for (rank=0; rank<nprocs; ++rank) {
-        var_buff = (double *) malloc((int_cells_per_proc[rank])*sizeof(double));
-        sprintf(file_suffix, "%s.%s-%s.%d.out",data_file,part_type,read_type,rank);
-        sprintf(file_out, "./%s/%s",out_folder, file_suffix);
-        FILE *fp = fopen(file_out, "w");
-        if ( fp == NULL ) {
-            fprintf(stderr, "Error opening file %s for writing\n", file_out);
-            return -1;
-        }
-
-        fprintf(fp,"omega=%.20lf\n",  omega);
-        fprintf(fp,"cnorm[%d]=%.20lf\n", nor,  cnorm[nor]);
-
-        for (i=0; i<int_cells_per_proc[rank]; ++i) {
-            var_buff[i]=direc1[l2g_g[rank][i]];
-        }
-        ouput_b(file_suffix, rank, int_cells_per_proc[rank]-1, var_buff, "direc1");
-
-        for (i=0; i<int_cells_per_proc[rank]; ++i) {
-            var_buff[i]=direc2[l2g_g[rank][i]];
-        }
-        ouput_b(file_suffix, rank, int_cells_per_proc[rank]-1, var_buff, "direc2");
-
-        for (i=0; i<int_cells_per_proc[rank]; ++i) {
-            var_buff[i]=resvec[l2g_g[rank][i]];
-        }
-        ouput_b(file_suffix, rank, int_cells_per_proc[rank]-1, var_buff, "resvec");
-
-        for (i=0; i<int_cells_per_proc[rank]; ++i) {
-            var_buff[i]=cnorm[l2g_g[rank][i]];
-        }
-        ouput_b(file_suffix, rank, int_cells_per_proc[rank]-1, var_buff, "cnorm");
-
-        for (i=0; i<int_cells_per_proc[rank]; ++i) {
-            var_buff[i]=var[l2g_g[rank][i]];
-        }
-        ouput_b(file_suffix, rank, int_cells_per_proc[rank]-1, var_buff, "var");
-
-        free(var_buff);
-        fclose(fp);
+    sprintf(file_suffix, "%s.%s-%s.%d.out",data_file,part_type,read_type,myrank);
+    sprintf(file_out, "./%s/%s",out_folder, file_suffix);
+    FILE *fp = fopen(file_out, "w");
+    if ( fp == NULL ) {
+        fprintf(stderr, "Error opening file %s for writing\n", file_out);
+        return -1;
     }
+
+    fprintf(fp,"omega=%.20lf\n",  omega);
+    fprintf(fp,"cnorm[%d]=%.20lf\n", nor,  cnorm[nor]);
+
+    ouput_b(file_suffix, myrank, nintcf, direc1, "direc1");
+    ouput_b(file_suffix, myrank, nintcf, direc2, "direc2");
+    ouput_b(file_suffix, myrank, nintcf, resvec, "resvec");
+    ouput_b(file_suffix, myrank, nintcf, cnorm, "cnorm");
+    ouput_b(file_suffix, myrank, nintcf, var, "var");
+    fclose(fp);
+    return 0;
+}
+
+
+int check_initialization_values(char* file_in, char* part_type, char* read_type, int nprocs, int myrank,
+        int nintci_g, int nintcf_g, int nextci_g, int nextcf_g, int** lcc_g,
+        int nintci, int nintcf, int nextci, int nextcf, int** lcc,
+        double* bs, double* be, double* bn, double* bw, double* bl, double* bh, double* bp, double* su,
+        int* points_count, int** points, int* elems,
+        double* var, double* cgup, double* oc, double* cnorm,
+        int* local_global_index, int* global_local_index,
+        int nghb_cnt, int* nghb_to_rank,
+        int* send_cnt, int** send_lst,  int *recv_cnt, int** recv_lst,
+        int *partitioning_map, int write_me) {
+    if(myrank==0) {
+        printf("!!!!!!!!!!!!!!!lcc[35995][0]=%d\n", lcc[35995][1]);
+    }
+    int nghb_idx = 0;
+    char file_out[100];
+    char file_suffix[100];
+    char out_folder[]="output";
+    //find base file name
+    char *data_file = strrchr(file_in,'/')+1;
+    //strip data file base name
+    data_file = strndup(data_file, strchr(data_file, '.')-data_file);
+    sprintf(file_suffix, "%s.%s-%s.%d.out",data_file,part_type,read_type,myrank);
+    sprintf(file_out,"./%s/%s", out_folder, file_suffix);
+    FILE *fp = fopen(file_out, "w");
+    if ( fp == NULL ) {
+        fprintf(stderr, "Error opening file %s for writing\n", file_out);
+        return -1;
+    }
+    fprintf(fp, "nprocs=%d\n", nprocs);
+    switch(write_me) {
+      case 5: {
+        ouput_b(file_suffix, myrank, nextcf, bp, "bp");
+        ouput_b(file_suffix, myrank, nextcf, bs, "bs");
+        ouput_b(file_suffix, myrank, nextcf, bw, "bw");
+        ouput_b(file_suffix, myrank, nextcf, bl, "bl");
+        ouput_b(file_suffix, myrank, nextcf, bn, "bn");
+        ouput_b(file_suffix, myrank, nextcf, be, "be");
+        ouput_b(file_suffix, myrank, nextcf, bh, "bh");
+        ouput_b(file_suffix, myrank, nextcf, su, "su");
+
+        write_lists(file_suffix, myrank, nghb_cnt, send_cnt, send_lst, "send");
+        write_lists(file_suffix, myrank, nghb_cnt, recv_cnt, recv_lst, "recv");
+      }
+      case 4: {
+        ouput_l2g_g2l(file_suffix, myrank, nextcf_g+1, global_local_index, "g2l");
+      }
+      case 3: {
+        output_lcc(file_suffix, myrank, nintcf, lcc);
+        ouput_l2g_g2l(file_suffix, myrank, nintcf+1, local_global_index, "l2g");
+      }
+      case 2: {
+        ouput_l2g_g2l(file_suffix, myrank, nintcf_g+1, partitioning_map, "partitioning");
+      }
+      case 1: {
+        fprintf(fp, "nintci_g=%d, nintcf_g=%d, nextci_g=%d, nextcf_g=%d\n",nintci_g,nintcf_g,nextci_g,nextcf_g);
+        fprintf(fp, "nintci=%d, nintcf=%d, nextci=%d, nextcf=%d\n",nintci,nintcf,nextci,nextcf);
+        fprintf(fp, "nghb_cnt=%d\n", nghb_cnt);
+        for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+            fprintf(fp, "nghb_to_rank[%d]=%d", nghb_idx, nghb_to_rank[nghb_idx]);
+        }
+        fprintf(fp, "\n");
+      }
+      default:
+        break;
+    }
+    fclose(fp);
     return 0;
 }
 // end_of_student_code-----------------------------------------------------------------------------------

@@ -1,8 +1,0 @@
-1) Why residuals are different for sequantial and parallel code.
-2) Write function which gather all vars from processes and save in global var.
-
-
-Sequential results
-pent: 	it-546; 	residual: 9.695255e-11
-drall: 	it-335; 	residual: 9.876341e-11
-cojack: it-643;		residual: 9.882932e-11

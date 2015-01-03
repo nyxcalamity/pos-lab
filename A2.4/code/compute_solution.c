@@ -1,9 +1,7 @@
 /**
- * Computational loop
+ * Performs main computation loop
  *
- * @file compute_solution.c
- * @date 22-Oct-2012
- * @author V. Petkov
+ * @author V. Petkov, Denys Korzh, Denys Sobchyshak
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,17 +9,11 @@
 #include <mpi.h>
 
 
-int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, int** lcc, double* bp,
-                     double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
-                     double* cnorm, double* var, double *su, double* cgup, double* residual_ratio,
-                     int* local_global_index, int* global_local_index, int nghb_cnt,
-                     int* nghb_to_rank, int* send_cnt, int** send_lst, int *recv_cnt, int** recv_lst) {
-//    check_compute_arguments(nprocs, myrank, max_iters, nintci, nintcf, nextcf,
-//                        lcc, bp, bs, bw, bl, bn, be, bh,
-//                         cnorm, var, su, cgup, residual_ratio,
-//                         local_global_index, global_local_index, nghb_cnt,
-//                         nghb_to_rank, send_cnt, send_lst, recv_cnt, recv_lst,
-//                         file_in, points_count, points, elems, part_type, read_type);
+int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, 
+        int** lcc, double* bp, double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
+        double* cnorm, double* var, double *su, double* cgup, double* residual_ratio, 
+        int* local_global_index, int* global_local_index, int nghb_cnt, int* nghb_to_rank, int* send_cnt, 
+        int** send_lst, int *recv_cnt, int** recv_lst) {
     MPI_Status status;
     MPI_Request request_send[nghb_cnt], request_recv[nghb_cnt];
     MPI_Datatype index_type[nghb_cnt];
@@ -31,17 +23,11 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     int nghb_idx=0;
 
     /** parameters used in gccg */
-    int iter = 1;
-    int if1 = 0;
-    int if2 = 0;
-    int nor = 1;
-    int nor1 = nor - 1;
-    int nc = 0;
-    int nomax = 3;
+    int iter=1, if1=0, if2=0, nor=1, nc=0, nomax=3;
+    int nor1 = nor-1;
 
     /** the reference residual */
-    double resref_g = 0.0;
-    double resref = 0.0;
+    double resref_g=0.0, resref=0.0;
 
     /** array storing residuals */
     double *resvec = (double *) calloc(sizeof(double), (nintcf + 1));
@@ -87,16 +73,9 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     }
 
     while ( iter < max_iters ) {
-//        if (iter==max_iters-1) {
-//            check_compute_values(file_in, part_type, read_type, nprocs, myrank,
-//                    nintci, nintcf, nextcf,
-//                    resvec, direc1, direc2, var, cnorm);
-//        }
         /**********  START COMP PHASE 1 **********/
         // update the old values of direc
         for ( nc = nintci; nc <= nintcf; nc++ ) {
-//            if(local_global_index[nc]==36507)
-//                printf("direc1=%.15lf,resvec=%.15lf,cgup=%.15lf\n",direc1[nc],resvec[nc],cgup[nc]);
             direc1[nc] = direc1[nc] + resvec[nc] * cgup[nc];
         }       
 
@@ -111,6 +90,7 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
                 mpi_block_length[nghb_idx][nc] = 1;
                 mpi_displacements[nghb_idx][nc] = send_lst[nghb_idx][nc];
             }
+            
             MPI_Type_indexed(send_cnt[nghb_idx], mpi_block_length[nghb_idx], mpi_displacements[nghb_idx], 
                 MPI_DOUBLE, &index_type[nghb_idx]);
             MPI_Type_commit(&index_type[nghb_idx]);
@@ -119,16 +99,13 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
             MPI_Isend(direc1, 1, index_type[nghb_idx], nghb_to_rank[nghb_idx],
                     myrank, MPI_COMM_WORLD, &request_send[nghb_idx]);
         }
+        
         // Synchronize everything
         for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
             MPI_Wait(&request_recv[nghb_idx], &status);
             MPI_Wait(&request_send[nghb_idx], &status);
         }
-//        if (iter==max_iters-1) {
-//            check_compute_values(file_in, part_type, read_type, nprocs, myrank,
-//                    nintci, nintcf, nextcf,
-//                    resvec, direc1, direc2, var, cnorm);
-//        }
+        
         /** STOP Exchange of direc1 with MPI **/
         // compute new guess (approximation) for direc
         for ( nc = nintci; nc <= nintcf; nc++ ) {
@@ -143,19 +120,19 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         // execute normalization steps
         double oc1, oc2, occ;
         double occ_g;
-        if ( nor1 == 1 ) {
+        if (nor1 == 1) {
             oc1 = 0;
             occ = 0;
             occ_g=0;
 
-            for ( nc = nintci; nc <= nintcf; nc++ ) {
+            for (nc = nintci; nc <= nintcf; nc++) {
                 occ = occ + direc2[nc] * adxor1[nc];
             }
             MPI_Allreduce(&occ, &occ_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
             occ = occ_g;
 
             oc1 = occ / cnorm[1];
-            for ( nc = nintci; nc <= nintcf; nc++ ) {
+            for (nc = nintci; nc <= nintcf; nc++) {
                 direc2[nc] = direc2[nc] - oc1 * adxor1[nc];
                 direc1[nc] = direc1[nc] - oc1 * dxor1[nc];
             }
@@ -206,8 +183,6 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         cnorm[nor] = cnorm_g;
 
         MPI_Allreduce(&omega, &omega_g, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-//        printf("r%d, omega_g=%.30lf\n",myrank, omega_g);
-//        printf("r%d, cnorm[nor]=%.30lf\n",myrank, cnorm[nor]);
         omega = omega_g;
         omega = omega / cnorm[nor];
         double res_updated = 0.0;

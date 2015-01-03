@@ -1,0 +1,19 @@
+This file contains some of the agreed upon code conventions:
+- every comment is to be separated from a comment delimiter by a space and to be started with a capital
+letter
+// Like this
+
+- a comment should always start above the code block it relates to and should always have the same 
+indentation, everything else is to be treated as a temporary code that ultimately must to be removed
+
+- a function comment should always be composed of complete sentences.
+
+- line width is 120 chars, it can be longer only if moving remainder to a new string will leave it 
+almost completely empty or if the grouping of arguments/commands makes more sense
+
+- there should be a minimum of 2 line break between functions or include declaration and functions, 
+which is to be counted excluding any comments in between. Thus if there are comments in between the 
+former, the break can be extended by the number of lines the comment is taking
+
+- commented out code should not be present in the project unless otherwise specified by the commenter
+and when having a TODO or FIXME action designation

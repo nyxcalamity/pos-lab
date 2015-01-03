@@ -1,3 +1,8 @@
+/**
+ * Contains generalized algorithms for various benchmark initialization operations.
+ * 
+ * @author Denys Korzh, Denys Sobchyshak
+ */
 #ifndef INITIALIZATION_ALGORITHMS_H_
 #define INITIALIZATION_ALGORITHMS_H_
 

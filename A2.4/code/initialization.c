@@ -1,8 +1,8 @@
 /**
- * Initialization step - parse the input file, compute data distribution, initialize LOCAL computational arrays
+ * Initialization step - parse the input file, compute data distribution, initialize LOCAL 
+ * computational arrays
  *
- * @date 22-Oct-2012, 13-Nov-2014
- * @author V. Petkov, A. Berariu
+ * @author V. Petkov, A. Berariu, Denys Korzh, Denys Sobchyshak
  */
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,6 +17,7 @@
 #include "test_functions.h"
 #include "util_processors.h"
 #include "posl_definitions.h"
+
 
 int initialization(char* file_in, char* part_type, char* read_type, int nprocs, int myrank, 
         int* nintci, int* nintcf, int* nextci, int* nextcf, int*** lcc, double** bs, double** be,
@@ -108,7 +109,6 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
                 printf("i%-6d,p%d, %-10d %-10d  %-10d %-10d %-10d %-10d\n",
                         i,partitioning_map[i],lcc_g[i][0],lcc_g[i][1],lcc_g[i][2],lcc_g[i][3],lcc_g[i][4],
                         lcc_g[i][5]);
-//                printf("i%-6d, %d\n", i, local_global_index_g[i]);
             }
         }
     }
@@ -119,9 +119,6 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     if (OUTPUT_LCC) {
         if (myrank==0) {
             for (i=0;i<(*nintcf)+1;++i) {
-//                printf("i%-6d, %-10d %-10d  %-10d %-10d %-10d %-10d\n",
-//                        i,(*lcc)[i][0],(*lcc)[i][1],(*lcc)[i][2],(*lcc)[i][3],(*lcc)[i][4],(*lcc)[i][5]);
-//                printf("i%-6d, %d\n", i, (*local_global_index)[i]);
                 printf("i%-6d, %d\n", i, (*global_local_index)[i]);
             }
         }
@@ -175,16 +172,6 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     if (f_status != 0){
         return f_status;
     }
-//    check_initialization_values(file_in, part_type, read_type, nprocs, myrank,
-//            nintci_g, nintcf_g, nextci_g, nextcf_g, lcc_g,
-//            *nintci, *nintcf, *nextci,*nextcf, *lcc,
-//            *bs, *be, *bn, *bw, *bl, *bh, *bp, *su,
-//            points_count, *points, *elems,
-//            *var, *cgup, *oc, *cnorm,
-//            *local_global_index, *global_local_index,
-//            *nghb_cnt, *nghb_to_rank,
-//            *send_cnt, *send_lst,   *recv_cnt, *recv_lst,
-//            partitioning_map,  5);
     
     //convert global indexes
     converte_global2local_idx(myrank, *global_local_index, *nintci, *nintcf, *lcc, *nghb_cnt,

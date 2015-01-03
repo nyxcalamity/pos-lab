@@ -1,3 +1,8 @@
+/**
+ * Contains generalized parsing utils.
+ * 
+ * @author Denys Sobchyshak, Denys Korzh
+ */
 #ifndef UTIL_PROCESSORS_H_
 #define UTIL_PROCESSORS_H_
 

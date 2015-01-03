@@ -10,25 +10,6 @@
 
 /**
  * Parse an binary input data set and initialize simulation variables
- *
- * @param file_name
- * @param NINTCI
- * @param NINTCF
- * @param NEXTCI
- * @param NEXTCF
- * @param LCC
- * @param BS
- * @param BE
- * @param BN
- * @param BW
- * @param BL
- * @param BH
- * @param BP
- * @param SU
- * @param points_count
- * @param points
- * @param elems
- * @return
  */
 int read_binary_geo(char *file_name, int *NINTCI, int *NINTCF, int *NEXTCI, int *NEXTCF, int ***LCC,
                     double **BS, double **BE, double **BN, double **BW, double **BL, double **BH,

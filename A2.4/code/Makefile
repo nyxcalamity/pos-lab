@@ -1,10 +1,12 @@
-####################################################################
-#             Makefile for FIRE Solver Benchmarks                  #
-####################################################################
+# Makefile for FIRE Solver Benchmark
+#===================================================================================================
+# Declaration of variables
+#===================================================================================================
 CC = mpicc
 CFLAGS = -g -O0 -Wall
-LIBS = -lm #-lmetis -lpapi
+LIBS = -lm
 
+# Dynamically add
 CFLAGS += $(METIS_INC) $(PAPI_INC)
 LIBS += $(METIS_LIB) $(PAPI_LIB)
 
@@ -16,11 +18,23 @@ SRCS = initialization.c compute_solution.c finalization.c util_read_files.c util
        initialization_algorithms.c util_processors.c
 OBJS =  $(addsuffix .o, $(basename $(SRCS)))
 
+#===================================================================================================
+# Cleanup and initialization tasks
+#===================================================================================================
 all: clean init gccg
 
 init:
 	mkdir -p ./out
+	
+clean: clean-data
+	rm -rf *.o gccg $(LIBPOS)
 
+clean-data:
+	rm -rf out/* *.dat data/*.out
+
+#===================================================================================================
+# Compilation tasks
+#===================================================================================================
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
@@ -29,9 +43,3 @@ gccg: gccg.c test_functions.c $(LIBPOS)
 
 $(LIBPOS) : $(OBJS)
 	$(AR) $(ARFLAGS) $@ $+
-
-clean: clean-data
-	rm -rf *.o gccg $(LIBPOS)
-
-clean-data:
-	rm -rf out/* *.dat data/*.out

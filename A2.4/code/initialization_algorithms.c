@@ -1,3 +1,8 @@
+/**
+ * Contains generalized algorithms for various benchmark initialization operations.
+ * 
+ * @author Denys Korzh, Denys Sobchyshak
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -428,8 +433,8 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
         (*global_local_index)[i] = -1;
     }
     /*********** End initialize and allocate g2l and tmp variables ********************************/
-// TODO: We can do all work in one big loop but then we need to use the buffer before we allocate
-//    memory for tmp_recv_lst
+    // TODO: We can do all work in one big loop but then we need to use the buffer before we allocate
+    //    memory for tmp_recv_lst
     /************************ Start processing lcc and generating data ****************************/
     memset(is_saved, 0, (nextcf_g+1)*sizeof(int));
     // Count number of external cells and fill g2l with external cells, and fill tmp_recv_cnt
@@ -521,21 +526,6 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
                 (*recv_cnt)[nghb_idx]*sizeof(int) );
     }
 
-//    printf("r%d, nghb_cnt=%d\n", myrank, (*nghb_cnt));
-//    printf("r%d, recv_lst[0][0]=%d, recv_lst[0][1]=%d, recv_lst[0][2]=%d, recv_lst[0][3]=%d\n",
-//            myrank, (*recv_lst)[0][0], (*recv_lst)[0][1], (*recv_lst)[0][2], (*recv_lst)[0][3]);
-//    printf("r%d, recv_cnt[0]=%d, recv_cnt[1]=%d, recv_cnt[2]=%d, recv_cnt[3]=%d\n",
-//            myrank, (*recv_cnt)[0], (*recv_cnt)[1], (*recv_cnt)[2], (*recv_cnt)[3]);
-//    printf("r%d, tmp_recv_cnt[0]=%d, tmp_recv_cnt[1]=%d, tmp_recv_cnt[2]=%d, tmp_recv_cnt[3]=%d\n",
-//            myrank, tmp_recv_cnt[0], tmp_recv_cnt[1], tmp_recv_cnt[2], tmp_recv_cnt[3]);
-//    printf("r%d, n_ghost_cells[0]=%d, n_ghost_cells[1]=%d, n_ghost_cells[2]=%d, n_ghost_cells[3]=%d\n",
-//            myrank, n_ghost_cells[0], n_ghost_cells[1], n_ghost_cells[2], n_ghost_cells[3]);
-//    printf("r%d, start_idx_per_proc[0]=%d, start_idx_per_proc[1]=%d, start_idx_per_proc[2]=%d, start_idx_per_proc[3]=%d\n",
-//            myrank, start_idx_per_proc[0], start_idx_per_proc[1], start_idx_per_proc[2], start_idx_per_proc[3]);
-//TODO:    printf("r%d, nghb_cnt=%d\n", myrank, (*nghb_cnt));
-//      printf("r%d, nghb_to_rank[0]=%d, nghb_to_rank[1]=%d, nghb_to_rank[2]=%d, nghb_to_rank[3]=%d, nghb_to_rank[4]=%d\n",
-//            myrank, (*nghb_to_rank)[0], (*nghb_to_rank)[1], (*nghb_to_rank)[2], (*nghb_to_rank)[3], (*nghb_to_rank)[3]);
-
     // Total number of external cells
     for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {
         *nextcf += (*recv_cnt)[nghb_idx];
@@ -563,8 +553,6 @@ void allocate_send_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** se
         MPI_Recv(&(*send_cnt)[nghb_idx],1 , MPI_INT, (*nghb_to_rank)[nghb_idx], 
                 (*nghb_to_rank)[nghb_idx], MPI_COMM_WORLD, &status);
     }
-//    printf("r%d, send_cnt[0]=%d, send_cnt[1]=%d, send_cnt[2]=%d, send_cnt[3]=%d\n",
-//            myrank, (*send_cnt)[0], (*send_cnt)[1], (*send_cnt)[2], (*send_cnt)[3]);
     // Allocate send_lst with given sizes
     *send_lst = (int**) malloc( (*nghb_cnt)*sizeof(int*) );
     for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {

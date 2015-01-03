@@ -1,8 +1,7 @@
 /**
  * Finalization step - write results and other computational vectors to files
  *
- * @date 22-Oct-2012
- * @author V. Petkov
+ * @author V. Petkov, Denys Sobchyshak, Denys Korzh
  */
 
 #include <stdio.h>

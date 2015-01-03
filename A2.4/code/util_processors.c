@@ -1,3 +1,8 @@
+/**
+ * Contains generalized parsing utils.
+ * 
+ * @author Denys Sobchyshak, Denys Korzh
+ */
 #include "util_processors.h"
 #include "posl_definitions.h"
 

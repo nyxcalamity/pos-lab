@@ -8,8 +8,10 @@
 #include <stdlib.h>
 #include <mpi.h>
 #include <string.h>
+
 #include "util_write_files.h"
 #include "posl_definitions.h"
+#include "util_errors.h"
 
 void finalization(char* file_in, int nprocs, int myrank, int total_iters, double residual_ratio,
                   int nintci, int nintcf, double* var, int* local_global_index, int* global_local_index) {
@@ -103,5 +105,9 @@ void finalization(char* file_in, int nprocs, int myrank, int total_iters, double
         free(var_g);
         free(l2g_g);
         free(var_cummulated);
+    }
+    
+    if (DEBUG_ENABLED) {
+        log_dbg("Finalization phase complete on process #%d", myrank);
     }
 }

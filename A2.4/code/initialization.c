@@ -17,6 +17,7 @@
 #include "test_functions.h"
 #include "util_processors.h"
 #include "posl_definitions.h"
+#include "util_errors.h"
 
 
 int initialization(char* file_in, char* part_type, char* read_type, int nprocs, int myrank, 
@@ -57,50 +58,46 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     int f_status = read_init_data(file_in, read_key, myrank,  &nintci_g, &nintcf_g, &nextci_g, 
             &nextcf_g, &lcc_g, &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g, &points_count_g, 
             &points_g, &elems_g);
-    //TODO:externalize error checking
-    if (f_status != 0) {
-        return f_status;
-    }
+    check_status(myrank, f_status, "Reading initial data failed");
 
     f_status = partition(part_key, read_key, myrank, nprocs, nintci_g, nintcf_g, nextci_g, nextcf_g, 
             &*nintci, &*nintcf, &*nextci, &*nextcf, lcc_g, points_count_g, points_g, elems_g, 
             int_cells_per_proc, extcell_per_proc, local_global_index_g, &*local_global_index, 
             &partitioning_map);
-    //TODO:externalize error checking
-    if (f_status != 0){
-        return f_status;
-    }
+    check_status(myrank, f_status, "Domain partitioning failed");
     
     bcast_partitioning(read_key, myrank, &partitioning_map, &nintci_g, &nintcf_g, &nextci_g, &nextcf_g);
     
     f_status = allocate_lcc_elems_points(read_key, myrank, nprocs, nintci, nintcf, nextci, &*lcc, 
             &*points_count, &*points, &*elems, &*local_global_index, points_count_g, int_cells_per_proc);
+    check_status(myrank, f_status, "Allocating elements failed");
     
-    fill_l2g(read_key, myrank, nprocs, *nintcf, &*local_global_index, &local_global_index_g, 
+    f_status = fill_l2g(read_key, myrank, nprocs, *nintcf, &*local_global_index, &local_global_index_g, 
             partitioning_map, nintcf_g-nintci_g+1, int_cells_per_proc);
+    check_status(myrank, f_status, "Filling l2g failed");
     
     f_status = fill_lcc_elems_points(read_key, myrank, nprocs, *nintci, *nintcf, *lcc, *points_count, 
-            *points, *elems, *local_global_index, local_global_index_g, lcc_g, points_count_g, points_g, &elems_g, 
-            int_cells_per_proc);
+            *points, *elems, *local_global_index, local_global_index_g, lcc_g, points_count_g, points_g, 
+            &elems_g, int_cells_per_proc);
+    check_status(myrank, f_status, "Filling lcc and etc failed");
     
-    build_lists_g2l_next(nprocs, myrank, partitioning_map, nintcf_g, nextcf_g, &*nintcf, &*nextcf, 
+    f_status = build_lists_g2l_next(nprocs, myrank, partitioning_map, nintcf_g, nextcf_g, &*nintcf, &*nextcf, 
             &*lcc, &*local_global_index, &*global_local_index, &*nghb_cnt, &*nghb_to_rank, 
             &*recv_cnt, &*recv_lst);
+    check_status(myrank, f_status, "Building g2l lists failed");
     
-    allocate_send_lists(myrank, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt);
+    f_status = allocate_send_lists(myrank, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt);
+    check_status(myrank, f_status, "Allocating send lists failed");
     
     exchange_lists(myrank, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
     
     f_status = allocate_boundary_coef(nextcf, &*bs,&*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su);
+    check_status(myrank, f_status, "Allocating boundary coefficients failed");
     
     f_status = fill_boundary_coef(read_key, myrank, nprocs, *nintci, *nintcf, *nextci, *nextcf, *bs, 
             *be, *bn, *bw, *bl, *bh, *bp, *su, *local_global_index, local_global_index_g, 
             &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g, int_cells_per_proc);
-
-    //TODO:externalize error checking
-    if (f_status != 0){
-        return f_status;
-    }
+    check_status(myrank, f_status, "Filling boundary coefficients failed");
 
     // Check LCC
     if(OUTPUT_LCC_G) {
@@ -114,7 +111,8 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
     }
     if (OUTPUT_NINTCF_NINTCE) {
         printf("rank%d,*nintci=%d,*nintcf=%d, *nextci=%d, *nextcf=%d\n", myrank,*nintci,*nintcf,*nextci,*nextcf);
-    } // End check lcc
+    }
+    // End check lcc
     
     if (OUTPUT_LCC) {
         if (myrank==0) {
@@ -122,11 +120,6 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
                 printf("i%-6d, %d\n", i, (*global_local_index)[i]);
             }
         }
-    }
-
-    //TODO:externalize error checking
-    if (f_status != 0){
-        return f_status;
     }
 
     *var = (double*) calloc(sizeof(double), (*nextcf+1));
@@ -168,10 +161,6 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
                         *nghb_cnt, *nghb_to_rank, *send_cnt, *send_lst,
                         *recv_cnt, *recv_lst, OUTPUT_VTK, VTK_NEIGHBOUR);
     }
-    //TODO:externalize error checking
-    if (f_status != 0){
-        return f_status;
-    }
     
     //convert global indexes
     converte_global2local_idx(myrank, *global_local_index, *nintci, *nintcf, *lcc, *nghb_cnt,
@@ -194,10 +183,12 @@ int initialization(char* file_in, char* part_type, char* read_type, int nprocs, 
         free(be_g);
         free(bs_g);
         free(elems_g);
-        // It is not freed in gccg.c
         free(*global_local_index);
     }
-    printf("[INFO] Completed initialization on task #%d\n", myrank);
+    
+    if (DEBUG_ENABLED) {
+        log_dbg("Initialization phase complete on process #%d", myrank);
+    }
     /********** END INITIALIZATION **********/
     for (i=0; i<*nghb_cnt; ++i) {
         write_pstats_communication(input_key, part_key, myrank, nprocs, *nghb_cnt, i, 

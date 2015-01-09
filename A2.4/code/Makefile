@@ -3,7 +3,7 @@
 # Declaration of variables
 #===================================================================================================
 CC = mpicc
-CFLAGS = -g -O0 -Wall
+CFLAGS = -Wall -O0 -g #TODO:disable debug info during measurements and optimization for profiling
 LIBS = -lm
 
 # Dynamically add

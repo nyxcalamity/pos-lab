@@ -240,15 +240,13 @@ void build_vtk_out_name(char *file_name, const char* file_in, char* part_type, c
 }
 
 
-//TODO:include all execution setup identifiers in the file name
 int vtk_check(char *file_in, char* part_type, char* read_type, int nprocs, int myrank,
         int nintci, int nintcf, double *resvec, double *direc1, double *direc2, double *var,
         int points_count, int **points,  int *elems, int *local_global_index, int local_num_elems) {
     char file_name[80];
     int i=0;
     double *scalars;
-    //TODO:externalize this string
-    const char *out_dir = "out";
+    const char *out_dir = POSL_OUTPUT_DIR;
     char var_name[80];
     
     if ((scalars = (double *) malloc((nintcf+1)*sizeof(double))) == NULL) {
@@ -364,8 +362,7 @@ void vtk_check_lists(char *file_in, int myrank,
 
     // Write VTK
     char szFileName[80];
-    //TODO:externalize this string
-    const char *kOutputDirectoryName = "./out/";
+    const char *kOutputDirectoryName = POSL_OUTPUT_DIRECTORY;
 
     //find base file name
     char *data_file = strrchr(file_in,'/')+1;
@@ -438,8 +435,7 @@ void vtk_check_neighbour(char *file_in, int myrank,
 
     // Write VTK
     char szFileName[80];
-    //TODO:externalize this string
-    const char *kOutputDirectoryName = "./out/";
+    const char *kOutputDirectoryName = POSL_OUTPUT_DIRECTORY;
 
     //find base file name
     char *data_file = strrchr(file_in,'/')+1;

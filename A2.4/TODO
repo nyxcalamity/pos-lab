@@ -1,6 +1,6 @@
-- var array gathering: data types for collection
-- how do we measure runtime?
+- check code for mem leaks
 - get rid of all the TODOs
 
 Optional:
+- var array gathering: data types for collection
 - read only needed data

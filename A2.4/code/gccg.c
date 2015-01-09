@@ -14,6 +14,7 @@
 #include "compute_solution.h"
 #include "finalization.h"
 #include "test_functions.h"
+#include "util_errors.h"
 
 int main(int argc, char *argv[]) {
     int my_rank, num_procs, i;
@@ -54,36 +55,35 @@ int main(int argc, char *argv[]) {
     int **send_lst;    /// lists of cells to be sent to each neighbour (size: nghb_cnt x send_cnt[*])
     int *recv_cnt;    /// number of cells to be received from each neighbour (size: nghb_cnt)
     int **recv_lst;    /// lists of cells to be received from each neighbour (size: nghb_cnt x recv_cnt[*])
+    
+    // time measurement variables
+    double start_time, end_time, min_start_time, max_end_time;
 
-
-    MPI_Init(&argc, &argv);    /// Start MPI
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);    /// get current process id
-    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);    /// get number of processes
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 
     /** process call arguments **/
     if ( argc < 4 ) {
-        fprintf(stderr, "Usage: ./gccg <input_file> <partition_type> <algorithm_type>\n");
+        log_err("Usage: ./gccg <input_file> <partition_type> <algorithm_type>");
         MPI_Abort(MPI_COMM_WORLD, -1);
     }
 
     char *file_in = argv[1];
     char *part_type = argv[2];
-    if ( strcmp( part_type, "classic" ) && strcmp( part_type, "dual" )
-            && strcmp( part_type, "nodal" ) ) {
-        printf(
-                " Wrong partition type selected. Valid values are classic, nodal and dual \n" );
+    if (strcmp(part_type, "classic") && strcmp(part_type, "dual") && strcmp(part_type, "nodal" )) {
+        log_err("Wrong partition type selected. Valid values are classic, nodal and dual");
         MPI_Abort(MPI_COMM_WORLD, -1);
     }
     char *read_type = argv[3];
-    if ( strcmp( read_type, "oneread" ) && strcmp( read_type, "allread" ) ) {
-        printf(
-                " Wrong read-in algorithm selected. Valid values are oneread and allread. \n" );
+    if (strcmp(read_type, "oneread") && strcmp(read_type, "allread")) {
+        log_err("Wrong read-in algorithm selected. Valid values are oneread and allread");
         MPI_Abort(MPI_COMM_WORLD, -1);
     }
 
-
     /********** START INITIALIZATION **********/
-    // read-in the input file
+    MPI_Barrier(MPI_COMM_WORLD);
+    start_time = MPI_Wtime();
     int init_status = initialization(file_in, part_type, read_type, num_procs, my_rank,
                                      &nintci, &nintcf, &nextci, &nextcf, 
                                      &lcc, &bs, &be, &bn, &bw, &bl, &bh, &bp, &su, 
@@ -91,23 +91,26 @@ int main(int argc, char *argv[]) {
                                      &local_global_index, &global_local_index,
                                      &nghb_cnt, &nghb_to_rank, 
                                      &send_cnt, &send_lst, &recv_cnt, &recv_lst);
-
+    end_time = MPI_Wtime();
+    //find min and max times
+    MPI_Reduce(&start_time, &min_start_time, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&end_time, &max_end_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    //print status message
+    if (my_rank == 0) {
+        log_info("Initialization ET (secs): %f", max_end_time-min_start_time);
+    } 
     /** LOCAL DATA FROM HERE ON **/
     // at this point, all initialized vectors should contain only the locally needed data
     // and all variables representing the number of elements, cells, points, etc. should 
     // reflect the local setup, e.g. nintcf-nintci+1 is the local number of internal cells
-
     if ( init_status != 0 ) {
-        fprintf(stderr, "Failed to initialize data!\n");
+        log_err("Failed to initialize data!");
         MPI_Abort(MPI_COMM_WORLD, my_rank);
     }
-
-   
     /********** END INITIALIZATION **********/
 
-    double start_time, end_time, min_start_time, max_end_time;
-    MPI_Barrier(MPI_COMM_WORLD);
     /********** START COMPUTATIONAL LOOP **********/
+    MPI_Barrier(MPI_COMM_WORLD);
     start_time = MPI_Wtime();
     int total_iters = compute_solution(num_procs, my_rank, max_iters, nintci, nintcf, nextcf, 
                     lcc, bp, bs, bw, bl, bn, be, bh,
@@ -115,15 +118,28 @@ int main(int argc, char *argv[]) {
                      local_global_index, global_local_index, nghb_cnt, 
                      nghb_to_rank, send_cnt, send_lst, recv_cnt, recv_lst);
     end_time = MPI_Wtime();
-    /********** END COMPUTATIONAL LOOP **********/
+    //find min and max times
     MPI_Reduce(&start_time, &min_start_time, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
     MPI_Reduce(&end_time, &max_end_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    
+    //print status message
     if (my_rank == 0) {
-        printf("[STATS] Global computation phase time elapsed (secs): %f\n", max_end_time-min_start_time);
-    }    
+        log_info("Computation ET (secs): %f", max_end_time-min_start_time);
+    }
+    /********** END COMPUTATIONAL LOOP **********/
+    
     /********** START FINALIZATION **********/
-    finalization(file_in, num_procs, my_rank, total_iters, residual_ratio, nintci, nintcf, var, local_global_index, global_local_index);
+    MPI_Barrier(MPI_COMM_WORLD);
+    start_time = MPI_Wtime();
+    finalization(file_in, num_procs, my_rank, total_iters, residual_ratio, nintci, nintcf, var, 
+            local_global_index, global_local_index);
+    end_time = MPI_Wtime();
+    //find min and max times
+    MPI_Reduce(&start_time, &min_start_time, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&end_time, &max_end_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    //print status message
+    if (my_rank == 0) {
+        log_info("Finalization ET (secs): %f", max_end_time-min_start_time);
+    }
     /********** END FINALIZATION **********/
 
     // cleanup allocated memory
@@ -164,8 +180,7 @@ int main(int argc, char *argv[]) {
     }
     free(recv_lst);
 
-
-    MPI_Finalize();    /// cleanup MPI
-
+    MPI_Finalize();
+    
     return 0;
 }

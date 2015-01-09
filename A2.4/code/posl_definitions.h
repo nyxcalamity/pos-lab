@@ -33,7 +33,12 @@
 #define POSL_MPI_TAG_BP             107
 #define POSL_MPI_TAG_SU             108
 
+//error definitions
+#define POSL_ERROR                  -1
+#define POSL_OK                     0
+
 //debug definitions
+#define DEBUG_ENABLED               0
 #define OUTPUT_LCC_G                0
 #define OUTPUT_LCC                  0
 #define OUTPUT_NINTCF_NINTCE        0
@@ -41,6 +46,8 @@
 #define DEBUG_OUTPUT_PARTITIONING   0
         
 // VTK output definitions
+#define POSL_OUTPUT_DIRECTORY       "./out/"
+#define POSL_OUTPUT_DIR             "out"
 #define OUTPUT_VTK                  0
 #define VTK_ALL                     1
 #define VTK_SEND_LST                2

@@ -8,6 +8,9 @@
 #include <math.h>
 #include <mpi.h>
 
+#include "util_errors.h"
+#include "posl_definitions.h"
+
 
 int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, 
         int** lcc, double* bp, double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
@@ -175,7 +178,7 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         double omega = 0;
         double omega_g = 0;
         double cnorm_g = 0;
-        for ( nc = nintci; nc <= nintcf; nc++ ) {
+        for (nc = nintci; nc <= nintcf; nc++) {
             cnorm[nor] = cnorm[nor] + direc2[nc] * direc2[nc];
             omega = omega + resvec[nc] * direc2[nc];
         }
@@ -234,7 +237,9 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     free(dxor2);
     free(resvec);
     
-    printf("[INFO] Completed compute_solution on task #%d\n", myrank);
+    if (DEBUG_ENABLED) {
+        log_dbg("Computation phase complete on process #%d", myrank);
+    }
     
     return iter;
 }

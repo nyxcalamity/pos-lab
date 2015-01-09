@@ -60,14 +60,14 @@ int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nin
 /**
  * Computes a 1D array with its indexes as local cell IDs and its values as global cell IDs.
  */
-void fill_l2g(int read_key, int myrank, int nproc, int nintcf,  int** local_global_index, 
+int fill_l2g(int read_key, int myrank, int nproc, int nintcf,  int** local_global_index, 
         int ***local_global_index_g, int *partitioning_map, int nelems_g, int *int_cells_per_proc);
 
 
 /**
  * Counts the number of external cell for each process and change lcc to have indexes which are local
  */
-void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nintcf_g, int nextcf_g, 
+int build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nintcf_g, int nextcf_g, 
         int* nintcf, int* nextcf, int*** lcc, int** local_global_index, int** global_local_index, 
         int *nghb_cnt, int** nghb_to_rank, int **recv_cnt, int*** recv_lst);
 
@@ -75,7 +75,7 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
 /**
  * Sends and receives sizes of send list(which is equal to size of receive list) and allocate needed memory
  */
-void allocate_send_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst, 
+int allocate_send_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** send_cnt, int*** send_lst, 
         int **recv_cnt);
 
 

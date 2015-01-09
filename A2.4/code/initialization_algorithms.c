@@ -12,6 +12,7 @@
 #include "initialization_algorithms.h"
 #include "util_read_files.h"
 #include "posl_definitions.h"
+#include "util_errors.h"
 
 
 int read_init_data(char* file_in, int read_key, int myrank, int *nintci, int *nintcf, 
@@ -38,7 +39,6 @@ void bcast_partitioning(int read_key, int myrank, int **partitioning_map, int *n
         int *nextci_g, int *nextcf_g){
     if (read_key == POSL_INIT_ONE_READ) {
         //broadcast partitioning map size
-        //TODO:this is same as broadcasting cell idx sizes, merge the two
         if (myrank != 0) {
             *nintci_g = 0; *nintcf_g = 0;
             *nextci_g = 0; *nextcf_g = 0;
@@ -64,11 +64,12 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
         int **lcc_g, int points_count_g, int **points_g, int *elems_g, int *int_cells_per_proc, 
         int *extcell_per_proc, int **local_global_index_g, int **local_global_index, int **partitioning_map) {
     int i=0;
-    idx_t nelems, nnodes, ncommon, nparts, objval;
+    idx_t nelems, nnodes, ncommon=4, nparts, objval;
     idx_t *elem_ptr, *elem_idx, *elem_part, *node_part;
     
     nelems = nintcf_g-nintci_g+1;
     *partitioning_map = (int *) calloc(sizeof(int), (nintcf_g-nintci_g+1));
+    check_allocation(myrank, partitioning_map, "Partitioning map allocation failed");
     
     if (((read_key == POSL_INIT_ONE_READ) && (myrank == 0)) || (read_key == POSL_INIT_ALL_READ)) {
         *nintci = 0; *nintcf = 0;
@@ -92,8 +93,6 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
         } else {
             //initialize variables for metis
             nnodes = points_count_g;
-            //TODO:perform a proper constant externalization
-            ncommon = 4;
             nparts = nprocs;
             elem_ptr = (idx_t *) calloc(nelems+1, sizeof(idx_t));
             elem_idx = (idx_t *) calloc(nelems*8, sizeof(idx_t));
@@ -146,7 +145,7 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
             *nextci = (*nintcf)--;
         }
     }
-    return 0;
+    return POSL_OK;
 }
 
 
@@ -175,24 +174,24 @@ int allocate_lcc_elems_points(int read_key, int myrank, int nprocs, int *nintci,
         *points_count = points_count_g;
     }
     
-    if ((*lcc = (int**) malloc(((*nintcf)+1)*sizeof(int*))) == NULL) {
-        fprintf(stderr, "malloc failed to allocate first dimension of LCC");
-        return -1;
-    }
+    *lcc = (int**) malloc(((*nintcf)+1)*sizeof(int*));
+    check_allocation(myrank, lcc, "Failed to allocate first dimension of LCC");
+    
+    //TODO:use check_allocation
     for (i=0; i<(*nintcf)+1; i++) {
         if (((*lcc)[i] = (int *) malloc(6*sizeof(int))) == NULL) {
             fprintf(stderr, "malloc failed to allocate second dimension of lcc\n");
             return -1;
         }
     }
-    if ((*elems = (int *) malloc(((*nintcf)+1)*8*sizeof(int))) == NULL) {
-        fprintf(stderr, "malloc(elems) failed\n");
-        return -1;
-    }
-    if ((*points = (int **) calloc(*points_count, sizeof(int*))) == NULL) {
-        fprintf(stderr, "malloc() POINTS 1st dim. failed\n");
-        return -1;
-    }
+    
+    *elems = (int *) malloc(((*nintcf)+1)*8*sizeof(int));
+    check_allocation(myrank, elems, "Failed to allocate memory for elems");
+    
+    *points = (int **) calloc(*points_count, sizeof(int*));
+    check_allocation(myrank, elems, "Failed to allocate memory for points 1st dimention");
+    
+    //TODO:use check_allocation
     for (i=0; i<*points_count; i++) {
         if (((*points)[i] = (int *) calloc(3, sizeof(int))) == NULL) {
             fprintf(stderr, "malloc() POINTS 2nd dim. failed\n");
@@ -200,7 +199,7 @@ int allocate_lcc_elems_points(int read_key, int myrank, int nprocs, int *nintci,
         }
     }
     
-    return 0;
+    return POSL_OK;
 }
 
 
@@ -254,45 +253,37 @@ int fill_lcc_elems_points(int read_key, int myrank, int nprocs, int nintci, int 
             memcpy(points[i], points_g[i], 3*sizeof(int));
         }
     }
-    return 0;
+    return POSL_OK;
 }
 
 
 int allocate_boundary_coef(int *nextcf, double **bs, double **be, double **bn, double **bw, double **bl, 
         double **bh, double **bp, double **su) {
-    if ((*bs = (double *) malloc(((*nextcf)+1)*sizeof(double))) == NULL) {
-        printf("malloc() failed\n");
-        return -1;
-    }
-    if ((*be = (double *) malloc(((*nextcf)+1)*sizeof(double))) == NULL) {
-        printf("malloc() failed\n");
-        return -1;
-    }
-    if ((*bn = (double *) malloc(((*nextcf)+1)*sizeof(double))) == NULL) {
-        printf("malloc() failed\n");
-        return -1;
-    }
-    if ((*bw = (double *) malloc(((*nextcf)+1)*sizeof(double))) == NULL) {
-        printf("malloc() failed\n");
-        return -1;
-    }
-    if ((*bl = (double *) malloc(((*nextcf)+1)*sizeof(double))) == NULL) {
-        printf("malloc() failed\n");
-        return -1;
-    }
-    if ((*bh = (double *) malloc(((*nextcf)+1)*sizeof(double))) == NULL) {
-        printf("malloc() failed\n");
-        return -1;
-    }
-    if ((*bp = (double *) malloc(((*nextcf)+1)*sizeof(double))) == NULL) {
-        printf("malloc() failed\n");
-        return -1;
-    }
-    if ((*su = (double *) malloc(((*nextcf)+1)*sizeof(double))) == NULL) {
-        printf("malloc() failed\n");
-        return -1;
-    }
-    return 0;
+    *bs = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    check_alloc(bs, "malloc for bs failed");
+    
+    *be = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    check_alloc(be, "malloc for be failed");
+        
+    *bn = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    check_alloc(bn, "malloc for bn failed");
+    
+    *bw = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    check_alloc(bw, "malloc for bw failed");
+    
+    *bl = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    check_alloc(bl, "malloc for bl failed");
+    
+    *bh = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    check_alloc(bh, "malloc for bh failed");
+    
+    *bp = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    check_alloc(bp, "malloc for bp failed");
+    
+    *su = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    check_alloc(su, "malloc for su failed");
+
+    return POSL_OK;
 }
 
 
@@ -351,17 +342,16 @@ int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nin
             su[i] = (*su_g)[local_global_index[i]];
         }
     }
-    return 0;
+    return POSL_OK;
 }
 
 
-void fill_l2g(int read_key, int myrank, int nproc, int nintcf, int** local_global_index, 
+int fill_l2g(int read_key, int myrank, int nproc, int nintcf, int** local_global_index, 
         int ***local_global_index_g, int *partitioning_map, int nelems_g, int *int_cells_per_proc) {
     int i=0, local_idx=0, current_proc=0;
-    if ((*local_global_index = (int *) malloc(((nintcf)+1)*sizeof(int))) == NULL) {
-        //TODO:handle this error
-        fprintf(stderr, "malloc(local_global_index) failed\n");
-    }
+    
+    *local_global_index = (int *) malloc(((nintcf)+1)*sizeof(int));
+    check_allocation(myrank, local_global_index, "Malloc for local_global_index failed");
 
     for (i=0; i<nelems_g; ++i) {
         if (partitioning_map[i] == myrank) {
@@ -369,17 +359,15 @@ void fill_l2g(int read_key, int myrank, int nproc, int nintcf, int** local_globa
             ++local_idx;
         }
     }
-    
-    //TODO:refactor code to reduce duplicates
-    //in addition build global global to local if applicable
+
     if (read_key == POSL_INIT_ONE_READ && myrank == 0) {        
-        //TODO:handle memory allocation errors
-        if ((*local_global_index_g = (int**) malloc(nproc*sizeof(int*))) == NULL){
-            fprintf(stderr, "malloc failed to allocate first dimension of l2g_g");
-        }
+        *local_global_index_g = (int**) malloc(nproc*sizeof(int*));
+        check_allocation(myrank, local_global_index_g, "malloc failed to allocate first dimension of l2g_g");
+        
+        //TODO:use check_allocation
         for (i=0; i<nproc; i++) {
             if (((*local_global_index_g)[i] = (int*) malloc(int_cells_per_proc[i]*sizeof(int))) == NULL){
-                fprintf(stderr, "malloc failed to allocate second dimension of l2g_g");
+                log_err("malloc failed to allocate second dimension of l2g_g");
             }
         }
 
@@ -394,23 +382,26 @@ void fill_l2g(int read_key, int myrank, int nproc, int nintcf, int** local_globa
             local_idx = last_local_idx[current_proc];
             
             if (local_idx > int_cells_per_proc[current_proc]) {
-                printf("Wrong local index for processor #%d", current_proc);
+                log_err("Wrong local index for processor #%d", current_proc);
+                return POSL_ERROR;
             }
             
             (*local_global_index_g)[current_proc][local_idx] = i;
             ++(last_local_idx[current_proc]);
         }
     }
+    
+    return POSL_OK;
 }
 
 
-void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nintcf_g, int nextcf_g, 
+int build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nintcf_g, int nextcf_g, 
         int* nintcf, int* nextcf, int*** lcc, int** local_global_index, int** global_local_index, 
         int *nghb_cnt, int** nghb_to_rank, int **recv_cnt, int*** recv_lst) {
     /*********** Initialize and allocate g2l and tmp variables ************************************/
-    int proc=0, i=0, j=0, is_ghost_cell=0, idx_g=-1, neighbor_rank=-1; /// -1 to track errors
+    int proc=0, i=0, j=0, is_ghost_cell=0, idx_g=-1, neighbor_rank=-1;
     int n_ghost_cells[nprocs], start_idx_per_proc[nprocs];
-    int nghb_idx=0;    /// Needed for filling of nghb_to_rank
+    int nghb_idx=0;
     memset(n_ghost_cells, 0, nprocs*sizeof(int));
     memset(start_idx_per_proc, 0, nprocs*sizeof(int));
     *nextcf = 0;
@@ -424,10 +415,9 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
     /// lists of cells to be received from each neighbour (size: nprocs x recv_cnt[*])
     int *tmp_recv_lst[nprocs];
 
-    if ((*global_local_index = (int *) malloc((nextcf_g+1)*sizeof(int))) == NULL) {
-        fprintf(stderr, "malloc(global_local_index) in build_lists_g2l_next failed\n");
-        //TODO:handle this error
-    }
+    *global_local_index = (int *) malloc((nextcf_g+1)*sizeof(int));
+    check_allocation(myrank, global_local_index, "malloc(global_local_index) failed");
+    
     // We will fill whole g2l by -1 for easier debugging
     for (i=0; i<=nextcf_g; ++i) {
         (*global_local_index)[i] = -1;
@@ -502,10 +492,9 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
     }
 
     // Allocate and fill nhb_to_rank
-    if ((*nghb_to_rank = (int *) malloc((*nghb_cnt)*sizeof(int))) == NULL) {
-        fprintf(stderr, "malloc(nghb_to_rank) in build_lists_g2l_next failed\n");
-        //TODO:handle this error
-    }
+    *nghb_to_rank = (int *) malloc((*nghb_cnt)*sizeof(int));
+    check_allocation(myrank, nghb_to_rank, "malloc(nghb_to_rank) failed");
+    
     for (proc=0;proc<nprocs; ++proc) {
         if(tmp_recv_cnt[proc] !=0) {
             (*nghb_to_rank)[nghb_idx] = proc;
@@ -535,10 +524,12 @@ void build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nin
     for (proc=0; proc<nprocs; ++proc) {
         free(tmp_recv_lst[proc]);
     }
+    
+    return POSL_OK;
 }
 
 
-void allocate_send_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** send_cnt, 
+int allocate_send_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** send_cnt, 
         int*** send_lst, int **recv_cnt) {
     MPI_Status status;
     int nghb_idx=0;
@@ -554,10 +545,14 @@ void allocate_send_lists(int myrank, int *nghb_cnt, int** nghb_to_rank, int** se
                 (*nghb_to_rank)[nghb_idx], MPI_COMM_WORLD, &status);
     }
     // Allocate send_lst with given sizes
-    *send_lst = (int**) malloc( (*nghb_cnt)*sizeof(int*) );
+    *send_lst = (int**) malloc((*nghb_cnt)*sizeof(int*));
+    check_allocation(myrank, send_lst, "malloc of send_lst failed");
+    
     for (nghb_idx=0; nghb_idx<(*nghb_cnt); ++nghb_idx) {
         (*send_lst)[nghb_idx] = (int *) malloc((*send_cnt)[nghb_idx]*sizeof(int));
     }
+    
+    return POSL_OK;
 }
 
 

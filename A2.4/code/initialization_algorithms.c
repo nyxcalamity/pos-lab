@@ -177,12 +177,9 @@ int allocate_lcc_elems_points(int read_key, int myrank, int nprocs, int *nintci,
     *lcc = (int**) malloc(((*nintcf)+1)*sizeof(int*));
     check_allocation(myrank, lcc, "Failed to allocate first dimension of LCC");
     
-    //TODO:use check_allocation
     for (i=0; i<(*nintcf)+1; i++) {
-        if (((*lcc)[i] = (int *) malloc(6*sizeof(int))) == NULL) {
-            fprintf(stderr, "malloc failed to allocate second dimension of lcc\n");
-            return -1;
-        }
+        (*lcc)[i] = (int *) malloc(6*sizeof(int));
+        check_allocation(myrank, lcc+i, "malloc failed to allocate second dimension of lcc");
     }
     
     *elems = (int *) malloc(((*nintcf)+1)*8*sizeof(int));
@@ -191,12 +188,9 @@ int allocate_lcc_elems_points(int read_key, int myrank, int nprocs, int *nintci,
     *points = (int **) calloc(*points_count, sizeof(int*));
     check_allocation(myrank, elems, "Failed to allocate memory for points 1st dimention");
     
-    //TODO:use check_allocation
     for (i=0; i<*points_count; i++) {
-        if (((*points)[i] = (int *) calloc(3, sizeof(int))) == NULL) {
-            fprintf(stderr, "malloc() POINTS 2nd dim. failed\n");
-            return -1;
-        }
+        (*points)[i] = (int *) calloc(3, sizeof(int));
+        check_allocation(myrank, points+i, "malloc() POINTS 2nd dim. failed");
     }
     
     return POSL_OK;
@@ -364,11 +358,9 @@ int fill_l2g(int read_key, int myrank, int nproc, int nintcf, int** local_global
         *local_global_index_g = (int**) malloc(nproc*sizeof(int*));
         check_allocation(myrank, local_global_index_g, "malloc failed to allocate first dimension of l2g_g");
         
-        //TODO:use check_allocation
         for (i=0; i<nproc; i++) {
-            if (((*local_global_index_g)[i] = (int*) malloc(int_cells_per_proc[i]*sizeof(int))) == NULL){
-                log_err("malloc failed to allocate second dimension of l2g_g");
-            }
+            (*local_global_index_g)[i] = (int*) malloc(int_cells_per_proc[i]*sizeof(int));
+            check_allocation(myrank, (local_global_index_g+i), "malloc failed to allocate 2nd dimension of l2g_g");
         }
 
         //initialize array of local indexes

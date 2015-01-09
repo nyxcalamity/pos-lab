@@ -106,6 +106,7 @@ int main(int argc, char *argv[]) {
     /********** END INITIALIZATION **********/
 
     double start_time, end_time, min_start_time, max_end_time;
+    MPI_Barrier(MPI_COMM_WORLD);
     /********** START COMPUTATIONAL LOOP **********/
     start_time = MPI_Wtime();
     int total_iters = compute_solution(num_procs, my_rank, max_iters, nintci, nintcf, nextcf, 

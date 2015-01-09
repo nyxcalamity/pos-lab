@@ -105,15 +105,22 @@ int main(int argc, char *argv[]) {
    
     /********** END INITIALIZATION **********/
 
+    double start_time, end_time, min_start_time, max_end_time;
     /********** START COMPUTATIONAL LOOP **********/
+    start_time = MPI_Wtime();
     int total_iters = compute_solution(num_procs, my_rank, max_iters, nintci, nintcf, nextcf, 
                     lcc, bp, bs, bw, bl, bn, be, bh,
                      cnorm, var, su, cgup, &residual_ratio,
                      local_global_index, global_local_index, nghb_cnt, 
                      nghb_to_rank, send_cnt, send_lst, recv_cnt, recv_lst);
-
+    end_time = MPI_Wtime();
     /********** END COMPUTATIONAL LOOP **********/
-
+    MPI_Reduce(&start_time, &min_start_time, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&end_time, &max_end_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    
+    if (my_rank == 0) {
+        printf("[STATS] Global computation phase time elapsed (secs): %f\n", max_end_time-min_start_time);
+    }    
     /********** START FINALIZATION **********/
     finalization(file_in, num_procs, my_rank, total_iters, residual_ratio, nintci, nintcf, var, local_global_index, global_local_index);
     /********** END FINALIZATION **********/

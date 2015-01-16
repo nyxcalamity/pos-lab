@@ -1,6 +1,0 @@
-- check code for mem leaks
-- get rid of all the TODOs
-
-Optional:
-- var array gathering: data types for collection
-- read only needed data

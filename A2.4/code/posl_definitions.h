@@ -33,6 +33,9 @@
 #define POSL_MPI_TAG_BP             107
 #define POSL_MPI_TAG_SU             108
 
+//statistics output
+#define POSL_COLLECT_STATS          0
+
 //error definitions
 #define POSL_ERROR                  -1
 #define POSL_OK                     0

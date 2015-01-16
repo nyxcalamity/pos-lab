@@ -91,11 +91,12 @@ void finalization(char* file_in, int nprocs, int myrank, int total_iters, double
 
     //perform stats printout
     if (myrank == 0) {
-        sprintf(file_out, "%s_summary.out", file_in);
-        int status = store_simulation_stats(file_in, file_out, nintci, ncells-1, var_cummulated, 
-                total_iters, residual_ratio);
-        if ( status != 0 ) fprintf(stderr, "Error when trying to write to file %s\n", file_out);
-        
+        if (POSL_COLLECT_STATS) {
+            sprintf(file_out, "%s_summary.out", file_in);
+            int status = store_simulation_stats(file_in, file_out, nintci, ncells-1, var_cummulated, 
+                    total_iters, residual_ratio);
+            if ( status != 0 ) fprintf(stderr, "Error when trying to write to file %s\n", file_out);
+        }        
         
         //free memory
         for (proc=0; proc<nprocs; ++proc) {

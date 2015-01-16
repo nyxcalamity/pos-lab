@@ -11,7 +11,6 @@
 #include <string.h>
 
 
-//TODO:use this function instead of any other command line arguments processor (like in gccg.c)
 void process_cl(char* file_in, char* part_type, char* read_type, int *input_key, int *part_key, int *read_key) {
     if (strstr(file_in, "tjunc") != NULL) {
         *input_key = POSL_DATA_TJUNC;
@@ -21,19 +20,25 @@ void process_cl(char* file_in, char* part_type, char* read_type, int *input_key,
         *input_key = POSL_DATA_PENT;
     } else if (strstr(file_in, "cojack") != NULL) {
         *input_key = POSL_DATA_COJACK;
+    } else {
+        *input_key = POSL_ERROR;
     }
 
     if (!strcmp(part_type, "classic")) {
         *part_key = POSL_PARTITIONING_CLASSIC;
     } else if (!strcmp(part_type, "dual")) {
         *part_key = POSL_PARTITIONING_DUAL;
-    } else {
+    } else if (!strcmp(part_type, "nodal")) {
         *part_key = POSL_PARTITIONING_NODAL;
+    } else {
+        *part_key = POSL_ERROR;
     }
 
     if (!strcmp(read_type, "oneread")) {
         *read_key = POSL_INIT_ONE_READ;
-    } else {
+    } else if (!strcmp(read_type, "allread")) {
         *read_key = POSL_INIT_ALL_READ;
+    } else {
+        *read_key = POSL_ERROR;
     }
 }

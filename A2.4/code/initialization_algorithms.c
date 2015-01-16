@@ -98,7 +98,8 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
             elem_idx = (idx_t *) calloc(nelems*8, sizeof(idx_t));
             elem_part = (idx_t *) calloc(nelems, sizeof(idx_t));
             node_part = (idx_t *) calloc(nnodes, sizeof(idx_t));
-            //TODO:add comments regarding element allocation and input data for metis
+            
+            //assign arrays that store metis graph mesh
             for (i=0; i<(nelems+1); i++) {
                 elem_ptr[i] = 8*i;
             }
@@ -400,11 +401,11 @@ int build_lists_g2l_next(int nprocs, int myrank, int *partitioning_map, int nint
     // Used to check if we already saved the cel index
     int is_saved[nextcf_g+1];
     /** Lists for neighboring information */
-    /// number of cells to be received from each neighbour (size: nprocs)
+    /// number of cells to be received from each neighbor (size: nprocs)
     int tmp_recv_cnt[nprocs];
     memset(tmp_recv_cnt, 0, nprocs*sizeof(int));
     // TODO: try not to use tmp_recv_lst and save all data immediately in revc_lst
-    /// lists of cells to be received from each neighbour (size: nprocs x recv_cnt[*])
+    // lists of cells to be received from each neighbor (size: nprocs x recv_cnt[*])
     int *tmp_recv_lst[nprocs];
 
     *global_local_index = (int *) malloc((nextcf_g+1)*sizeof(int));

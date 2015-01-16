@@ -15,19 +15,16 @@
 #include "util_read_files.h"
 #include "util_write_files.h"
 #include "test_functions.h"
-#include "util_processors.h"
 #include "posl_definitions.h"
 #include "util_errors.h"
 
 
-int initialization(char* file_in, char* part_type, char* read_type, int nprocs, int myrank, 
+int initialization(char* file_in, int input_key, int part_key, int read_key, int nprocs, int myrank, 
         int* nintci, int* nintcf, int* nextci, int* nextcf, int*** lcc, double** bs, double** be,
         double** bn, double** bw, double** bl, double** bh, double** bp, double** su, int* points_count,
         int*** points, int** elems, double** var, double** cgup, double** oc, double** cnorm, 
         int** local_global_index, int** global_local_index, int *nghb_cnt, int** nghb_to_rank, 
         int** send_cnt, int*** send_lst,  int **recv_cnt, int*** recv_lst) {
-    int input_key, part_key, read_key;
-    process_cl(file_in, part_type, read_type, &input_key, &part_key, &read_key);
     /********** START INITIALIZATION **********/
     //TODO:optimize inits and var names
     // Used by metis function(gives us information to which process belongs our cell)

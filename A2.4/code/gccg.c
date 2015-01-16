@@ -15,6 +15,8 @@
 #include "finalization.h"
 #include "test_functions.h"
 #include "util_errors.h"
+#include "util_processors.h"
+
 
 int main(int argc, char *argv[]) {
     int my_rank, num_procs, i;
@@ -63,28 +65,32 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 
-    /** process call arguments **/
-    if ( argc < 4 ) {
+    //process command line arguments
+    if (argc < 4) {
         log_err("Usage: ./gccg <input_file> <partition_type> <algorithm_type>");
-        MPI_Abort(MPI_COMM_WORLD, -1);
+        MPI_Abort(MPI_COMM_WORLD, POSL_ERROR);
     }
 
     char *file_in = argv[1];
     char *part_type = argv[2];
-    if (strcmp(part_type, "classic") && strcmp(part_type, "dual") && strcmp(part_type, "nodal" )) {
-        log_err("Wrong partition type selected. Valid values are classic, nodal and dual");
-        MPI_Abort(MPI_COMM_WORLD, -1);
-    }
     char *read_type = argv[3];
-    if (strcmp(read_type, "oneread") && strcmp(read_type, "allread")) {
+    int input_key, part_key, read_key;
+    process_cl(file_in, part_type, read_type, &input_key, &part_key, &read_key);
+    
+    if (part_key == POSL_ERROR) {
+        log_err("Wrong partition type selected. Valid values are classic, nodal and dual");
+        MPI_Abort(MPI_COMM_WORLD, POSL_ERROR);
+    }
+    
+    if (read_key == POSL_ERROR) {
         log_err("Wrong read-in algorithm selected. Valid values are oneread and allread");
-        MPI_Abort(MPI_COMM_WORLD, -1);
+        MPI_Abort(MPI_COMM_WORLD, POSL_ERROR);
     }
 
     /********** START INITIALIZATION **********/
     MPI_Barrier(MPI_COMM_WORLD);
     start_time = MPI_Wtime();
-    int init_status = initialization(file_in, part_type, read_type, num_procs, my_rank,
+    int init_status = initialization(file_in, input_key, part_key, read_key, num_procs, my_rank,
                                      &nintci, &nintcf, &nextci, &nextcf, 
                                      &lcc, &bs, &be, &bn, &bw, &bl, &bh, &bp, &su, 
                                      &points_count, &points, &elems, &var, &cgup, &oc, &cnorm, 
@@ -103,9 +109,9 @@ int main(int argc, char *argv[]) {
     // at this point, all initialized vectors should contain only the locally needed data
     // and all variables representing the number of elements, cells, points, etc. should 
     // reflect the local setup, e.g. nintcf-nintci+1 is the local number of internal cells
-    if ( init_status != 0 ) {
+    if (init_status != 0) {
         log_err("Failed to initialize data!");
-        MPI_Abort(MPI_COMM_WORLD, my_rank);
+        MPI_Abort(MPI_COMM_WORLD, POSL_ERROR);
     }
     /********** END INITIALIZATION **********/
 

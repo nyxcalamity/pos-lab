@@ -4,7 +4,7 @@
 #@ class = test
 #@ island_count=1
 #@ node = 1
-#@ total_tasks = 2
+#@ total_tasks = 7
 #@ wall_clock_limit = 0:30:00
 #@ energy_policy_tag = pos_ws24_tag
 

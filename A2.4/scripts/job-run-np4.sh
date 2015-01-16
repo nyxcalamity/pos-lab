@@ -9,8 +9,8 @@
 #@ energy_policy_tag = pos_ws24_tag
 
 #@ initialdir = $(home)/pos-lab/A2.4
-#@ output = $(home)/job24-np4.out
-#@ error = $(home)/job24-np4.err
+#@ output = $(home)/pos-lab/A2.4/stats/job24-np4.out
+#@ error = $(home)/pos-lab/A2.4/stats/job24-np4.err
 
 #@ notification=always
 #@ notify_user=denys.sobchyshak@tum.de
@@ -21,6 +21,7 @@ perf_off
 
 #minimum optimization objective command
 echo "[INFO] Statistics collection on 4 processes"
+echo "----------------------------------------------------------------------------------------------"
 echo "[INFO] Running base code"
 mpiexec -n 4 ./code/gccg ./code/data/pent.geo.bin nodal oneread
 mpiexec -n 4 ./code/gccg ./code/data/pent.geo.bin nodal oneread

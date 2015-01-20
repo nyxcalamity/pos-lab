@@ -9,16 +9,12 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "util_write_files.h"
-
 int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, int nintcf, int nextcf, int** lcc, double* bp,
                      double* bs, double* bw, double* bl, double* bn, double* be, double* bh,
                      double* cnorm, double* var, double *su, double* cgup, double* residual_ratio,
                      int* local_global_index, int* global_local_index, int nghb_cnt,
                      int* nghb_to_rank, int* send_cnt, int** send_lst, int *recv_cnt, int** recv_lst,
-                     char *file_in, int points_count, int **points, int *elems, char* part_type, char* read_type,
-                     int **l2g_g, int *int_cells_per_proc) {
-    int rank=0;
+                     char *file_in, int points_count, int **points, int *elems) {
     /** parameters used in gccg */
     int iter = 1;
     int if1 = 0;
@@ -77,21 +73,12 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         /********** START COMP PHASE 2 **********/
         // execute normalization steps
         double oc1, oc2, occ;
-        double occ_a[nprocs];
         if ( nor1 == 1 ) {
             oc1 = 0;
             occ = 0;
 
-//            for ( nc = nintci; nc <= nintcf; nc++ ) {
-//                occ = occ + direc2[nc] * adxor1[nc];
-//            }
-            // This sum we did to imitate sum with MPI_Allreduce and we got the same result.
-            for (rank=0; rank<nprocs; ++rank) {
-                occ_a[rank]=0;
-                for ( nc = 0; nc < int_cells_per_proc[rank]; nc++ ) {
-                    occ_a[rank] = occ_a[rank] + direc2[l2g_g[rank][nc]] * adxor1[l2g_g[rank][nc]];
-                }
-                occ = occ + occ_a[rank];
+            for ( nc = nintci; nc <= nintcf; nc++ ) {
+                occ = occ + direc2[nc] * adxor1[nc];
             }
 
             oc1 = occ / cnorm[1];
@@ -106,31 +93,15 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
                 oc1 = 0;
                 occ = 0;
 
-//                for ( nc = nintci; nc <= nintcf; nc++ ) {
-//                    occ = occ + direc2[nc] * adxor1[nc];
-//                }
-                // This sum we did to imitate sum with MPI_Allreduce and we got the same result.
-                for (rank=0; rank<nprocs; ++rank) {
-                    occ_a[rank]=0;
-                    for ( nc = 0; nc < int_cells_per_proc[rank]; nc++ ) {
-                        occ_a[rank] = occ_a[rank] + direc2[l2g_g[rank][nc]] * adxor1[l2g_g[rank][nc]];
-                    }
-                    occ = occ + occ_a[rank];
+                for ( nc = nintci; nc <= nintcf; nc++ ) {
+                    occ = occ + direc2[nc] * adxor1[nc];
                 }
 
                 oc1 = occ / cnorm[1];
                 oc2 = 0;
                 occ = 0;
-//                for ( nc = nintci; nc <= nintcf; nc++ ) {
-//                    occ = occ + direc2[nc] * adxor2[nc];
-//                }
-                // This sum we did to imitate sum with MPI_Allreduce and we got the same result.
-                for (rank=0; rank<nprocs; ++rank) {
-                    occ_a[rank]=0;
-                    for ( nc = 0; nc < int_cells_per_proc[rank]; nc++ ) {
-                        occ_a[rank] = occ_a[rank] + direc2[l2g_g[rank][nc]] * adxor2[l2g_g[rank][nc]];
-                    }
-                    occ = occ + occ_a[rank];
+                for ( nc = nintci; nc <= nintcf; nc++ ) {
+                    occ = occ + direc2[nc] * adxor2[nc];
                 }
 
                 oc2 = occ / cnorm[2];
@@ -147,45 +118,21 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         // compute the new residual
         cnorm[nor] = 0;
         double omega = 0;
-//        for ( nc = nintci; nc <= nintcf; nc++ ) {
-//            cnorm[nor] = cnorm[nor] + direc2[nc] * direc2[nc];
-//            omega = omega + resvec[nc] * direc2[nc];
-//        }
-        // This sum we did to imitate sum with MPI_Allreduce and we got the same result.
-        double omega_a[nprocs];
-        double cnorm_a[nprocs];
-        for (rank=0; rank<nprocs; ++rank) {
-            omega_a[rank]=0;
-            cnorm_a[rank]=0;
-            for ( nc = 0; nc < int_cells_per_proc[rank]; nc++ ) {
-                cnorm_a[rank] = cnorm_a[rank] + direc2[l2g_g[rank][nc]] * direc2[l2g_g[rank][nc]];
-                omega_a[rank] = omega_a[rank] + resvec[l2g_g[rank][nc]] * direc2[l2g_g[rank][nc]];
-            }
-            omega = omega + omega_a[rank];
-            cnorm[nor] = cnorm[nor] + cnorm_a[rank];
-//            printf("r%d, omega=%.30lf\n",rank, omega_a[rank]);
-//            printf("r%d, cnorm[nor]=%.30lf\n",rank, cnorm_a[rank]);
+        for ( nc = nintci; nc <= nintcf; nc++ ) {
+            cnorm[nor] = cnorm[nor] + direc2[nc] * direc2[nc];
+            omega = omega + resvec[nc] * direc2[nc];
         }
-//        printf("r%d, cnorm[nor]=%.30lf\n",myrank, cnorm[nor]);
-//        printf("r%d, omega=%.30lf\n",myrank, omega);
+//        printf("r%d, cnorm[nor]=%.20lf\n",myrank, cnorm[nor]);
+//        printf("r%d, omega=%.20lf\n",myrank, omega);
 
         omega = omega / cnorm[nor];
         double res_updated = 0.0;
         for ( nc = nintci; nc <= nintcf; nc++ ) {
             resvec[nc] = resvec[nc] - omega * direc2[nc];
-//            res_updated = res_updated + resvec[nc] * resvec[nc];
+            res_updated = res_updated + resvec[nc] * resvec[nc];
             var[nc] = var[nc] + omega * direc1[nc];
         }
 //        printf("r%d, omega=%.20lf\n",myrank, omega);
-        // This sum we did to imitate sum with MPI_Allreduce and we got the same result.
-        double res_updated_a[nprocs];
-        for (rank=0; rank<nprocs; ++rank) {
-            res_updated_a[rank]=0;
-            for ( nc = 0; nc < int_cells_per_proc[rank]; nc++ ) {
-                res_updated_a[rank] = res_updated_a[rank] + resvec[l2g_g[rank][nc]] * resvec[l2g_g[rank][nc]];
-            }
-            res_updated = res_updated + res_updated_a[rank];
-        }
         res_updated = sqrt(res_updated);
         *residual_ratio = res_updated / resref;
 
@@ -216,11 +163,6 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
         }
         nor1 = nor - 1;
         /********** END COMP PHASE 2 **********/
-        if (iter==max_iters) {
-            check_compute_values(file_in, part_type, read_type, nprocs, myrank,
-                    nintci, nintcf, nextcf, omega, nor,
-                    resvec, direc1, direc2, var, cnorm, l2g_g, int_cells_per_proc);
-        }
     }
 //    vtk_check(file_in, myrank, nintci, nintcf, resvec, direc1, direc2, var, points_count, points,
 //                    elems, local_global_index, (nintcf-nintci+1));

@@ -14,11 +14,12 @@
 #include "compute_solution.h"
 #include "finalization.h"
 #include "test_functions.h"
+#include "time.h"
 
 int main(int argc, char *argv[]) {
     int my_rank, num_procs, i;
 
-    const int max_iters = 1000;    /// maximum number of iteration to perform
+    const int max_iters = 10000;    /// maximum number of iteration to perform
 
     /** Simulation parameters parsed from the input datasets */
     int nintci, nintcf;    /// internal cells start and end index
@@ -56,6 +57,7 @@ int main(int argc, char *argv[]) {
     int **send_lst;    /// lists of cells to be sent to each neighbour (size: nghb_cnt x send_cnt[*])
     int *recv_cnt;    /// number of cells to be received from each neighbour (size: nghb_cnt)
     int **recv_lst;    /// lists of cells to be received from each neighbour (size: nghb_cnt x recv_cnt[*])
+    double start_time, end_time;
   
 
     MPI_Init(&argc, &argv);    /// Start MPI
@@ -107,6 +109,7 @@ int main(int argc, char *argv[]) {
         /********** END INITIALIZATION **********/
 
         /********** START COMPUTATIONAL LOOP **********/
+        start_time = MPI_Wtime();
         int total_iters = compute_solution(num_procs, my_rank, max_iters, nintci, nintcf, nextcf,
                         lcc, bp, bs, bw, bl, bn, be, bh,
                          cnorm, var, su, cgup, &residual_ratio,
@@ -114,6 +117,8 @@ int main(int argc, char *argv[]) {
                          nghb_to_rank, send_cnt, send_lst, recv_cnt, recv_lst,
                          file_in, points_count, points, elems, part_type, read_type,
                          l2g_g, int_cells_per_proc);
+        end_time = MPI_Wtime();
+        printf("Computation ET (secs): %f\n", end_time-start_time);
         /********** END COMPUTATIONAL LOOP **********/
 
         /********** START FINALIZATION **********/

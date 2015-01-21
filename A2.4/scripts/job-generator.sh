@@ -3,8 +3,8 @@
 
 NP=$1
 NN=$((($NP+15)/16)) 
-EXEC=$3/gccg
-FILE_NAME=$4/a24-np$NP.sh
+EXEC=$2/gccg
+FILE_NAME=$3/a24-np$NP.sh
 rm -f $FILE_NAME
 
 echo "#!/bin/bash" >> $FILE_NAME

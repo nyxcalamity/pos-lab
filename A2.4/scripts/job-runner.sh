@@ -23,7 +23,8 @@ cd $WDIR
 rm -rf $BASE_DIR/stats/*
 
 #generate job files
-NUM_PROC=(2 3 4 5 6 7 8 12 16 20 24 28 32 36 40 44 48 52 56 60 64)
+#NUM_PROC=(2 3 4 5 6 7 8 12 16 20 24 28 32 36 40 44 48 52 56 60 64)
+NUM_PROC=(68 72 76 80 84 88 96 112 128)
 for i in ${NUM_PROC[@]}; do
     $SCRIPT_DIR/job-generator.sh $i $CODE $SCRIPT_DIR
 done
@@ -34,7 +35,7 @@ for i in ${NUM_PROC[@]}; do
 done
 
 #wait until jobs are finished
-while [ ! -f $BASE_DIR/stats/job24-np${NUM_PROC[20]}.out ]
+while [ ! -f $BASE_DIR/stats/job24-np128.out ]
 do
   sleep 5
 done

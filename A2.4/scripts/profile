@@ -1,2 +1,16 @@
 test -z "$PROFILEREAD" && . /etc/profile
 module load mpi.ibm git papi metis scorep cube vampir/8.0 totalview valgrind
+
+#common scorep config
+export SCOREP_METRIC_RUSAGE=ru_maxrss,ru_stime
+
+#profiling scorep config
+export SCOREP_EXPERIMENT_DIRECTORY=$HOME/pos-lab/A2.4/scorep-profile
+export SCOREP_ENABLE_PROFILING=1
+
+#tracing scorep config
+#export SCOREP_EXPERIMENT_DIRECTORY=$HOME/pos-lab/A2.4/scorep-trace
+#export SCOREP_ENABLE_TRACING=0
+
+#scorep config to play with
+#export SCOREP_MPI_ENABLE_GROUPS=cg,coll,p2p,xnonblock

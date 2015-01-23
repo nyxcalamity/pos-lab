@@ -5,7 +5,7 @@
 ####################################################################
 
 CC = mpicc
-CFLAGS = -Wall -g -O0 
+CFLAGS = -Wall -g -O3
 LIBS = -lm
 
 CFLAGS += $(METIS_INC) $(PAPI_INC)

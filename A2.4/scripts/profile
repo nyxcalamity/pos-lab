@@ -2,7 +2,7 @@ test -z "$PROFILEREAD" && . /etc/profile
 module load mpi.ibm git papi metis scorep cube vampir/8.0 totalview valgrind
 
 #common scorep config
-export SCOREP_METRIC_RUSAGE=ru_maxrss,ru_stime
+#export SCOREP_METRIC_RUSAGE=ru_maxrss,ru_stime
 
 #profiling scorep config
 export SCOREP_EXPERIMENT_DIRECTORY=$HOME/pos-lab/A2.4/scorep-profile

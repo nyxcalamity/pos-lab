@@ -21,8 +21,17 @@ perf_off
 
 ##execution
 echo "-------------------------------------------------------------------------"
-echo "Vectorization tests for optimization flags: -O1 -no-vec"
+echo "Vectorization tests for optimization flags: -O3"
 echo "-------------------------------------------------------------------------"
+echo "PENT"
 mpiexec -n 1 ./gccg ./data/pent.geo.bin classic oneread
-
-
+mpiexec -n 1 ./gccg ./data/pent.geo.bin classic oneread
+mpiexec -n 1 ./gccg ./data/pent.geo.bin classic oneread
+echo "PENT"
+mpiexec -n 1 ./gccg ./data/drall.geo.bin classic allread
+mpiexec -n 1 ./gccg ./data/drall.geo.bin classic allread
+mpiexec -n 1 ./gccg ./data/drall.geo.bin classic allread
+echo "PENT"
+mpiexec -n 1 ./gccg ./data/cojack.geo.bin classic allread
+mpiexec -n 1 ./gccg ./data/cojack.geo.bin classic allread
+mpiexec -n 1 ./gccg ./data/cojack.geo.bin classic allread

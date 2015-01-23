@@ -91,11 +91,14 @@ int main(int argc, char *argv[]) {
 
         /********** START INITIALIZATION **********/
         // read-in the input file
+        start_time = MPI_Wtime();
         int init_status = initialization(file_in, part_type, read_type, num_procs, my_rank,
                                          &nintci, &nintcf, &nextci, &nextcf,
                                          &lcc, &bs, &be, &bn, &bw, &bl, &bh, &bp, &su,
                                          &points_count, &points, &elems, &var, &cgup, &oc, &cnorm,
                                          &local_global_index, &l2g_g, int_cells_per_proc);
+        end_time = MPI_Wtime();
+        printf("Initialization ET (secs): %f\n", end_time-start_time);
         /** LOCAL DATA FROM HERE ON **/
         // at this point, all initialized vectors should contain only the locally needed data
         // and all variables representing the number of elements, cells, points, etc. should

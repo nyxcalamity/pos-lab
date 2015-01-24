@@ -11,7 +11,7 @@ CODE=$1
 if [ -z "$CODE" ]; then
     CODE=$BASE_DIR/code
 else 
-    CODE=$BASE_DIR/$CODE
+    CODE=$BASE_DIR/$CODE/optimized
 fi
 
 #make the code
@@ -23,11 +23,16 @@ cd $WDIR
 rm -rf $BASE_DIR/stats/*
 
 #generate job files
-#performance analysis task 1
 NUM_PROC=(2 3 4 5 6 7 8)
 for i in ${NUM_PROC[@]}; do
-    $SCRIPT_DIR/pa-task1.sh $i $CODE $SCRIPT_DIR
+    $SCRIPT_DIR/pa-min-req.sh $i $CODE $SCRIPT_DIR
 done
+
+#performance analysis task 1
+#NUM_PROC=(2 3 4 5 6 7 8)
+#for i in ${NUM_PROC[@]}; do
+#    $SCRIPT_DIR/pa-task1.sh $i $CODE $SCRIPT_DIR
+#done
 
 #performance analysis task 2
 #NUM_PROC=(2 3 4 5 6 7 8 12 16 20 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 96 112 128 144 160 176 192 208 224 240 256)

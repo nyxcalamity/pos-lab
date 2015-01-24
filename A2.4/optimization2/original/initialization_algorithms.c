@@ -222,11 +222,13 @@ int fill_lcc_elems_points(int read_key, int myrank, int nprocs, int nintci, int 
                 }
                 
                 //create and register new datatype within mpi
-                int mpi_displacements[int_cells_per_proc[proc]];
+                int mpi_block_length[int_cells_per_proc[proc]], mpi_displacements[int_cells_per_proc[proc]];
                 for (i=0; i<int_cells_per_proc[proc]; ++i) {
+                    mpi_block_length[i] = 8;
                     mpi_displacements[i] = 8*local_global_index_g[proc][i];
                 }
-                MPI_Type_create_indexed_block(int_cells_per_proc[proc], 8, mpi_displacements, MPI_INT, &index_type);
+                MPI_Type_indexed(int_cells_per_proc[proc], mpi_block_length, mpi_displacements, 
+                        MPI_INT, &index_type);
                 MPI_Type_commit(&index_type);
                 
                 MPI_Send(*(elems_g), 1, index_type, proc, POSL_MPI_TAG_ELEMENTS, MPI_COMM_WORLD);
@@ -297,11 +299,12 @@ int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nin
         if (myrank == 0) {
             for (proc=1; proc<nprocs; ++proc) {
                 //create and register new datatype within mpi
-                int mpi_displacements[int_cells_per_proc[proc]];
+                int mpi_block_length[int_cells_per_proc[proc]], mpi_displacements[int_cells_per_proc[proc]];
                 for (i=0; i<int_cells_per_proc[proc]; ++i) {
+                    mpi_block_length[i] = 1;
                     mpi_displacements[i] = local_global_index_g[proc][i];
                 }
-                MPI_Type_create_indexed_block(int_cells_per_proc[proc], 1, mpi_displacements, 
+                MPI_Type_indexed(int_cells_per_proc[proc], mpi_block_length, mpi_displacements, 
                         MPI_DOUBLE, &index_type);
                 MPI_Type_commit(&index_type);
                 

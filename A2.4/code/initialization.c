@@ -62,22 +62,30 @@ int initialization(char* file_in, int input_key, int part_key, int read_key, int
             int_cells_per_proc, extcell_per_proc, local_global_index_g, &*local_global_index, 
             &partitioning_map);
     check_status(myrank, f_status, "Domain partitioning failed");
-    
+
     bcast_partitioning(read_key, myrank, &partitioning_map, &nintci_g, &nintcf_g, &nextci_g, &nextcf_g);
-    
+
     f_status = allocate_lcc_elems_points(read_key, myrank, nprocs, nintci, nintcf, nextci, &*lcc, 
             &*points_count, &*points, &*elems, &*local_global_index, points_count_g, int_cells_per_proc);
     check_status(myrank, f_status, "Allocating elements failed");
-    
+
+    f_status = allocate_boundary_coef(nintcf, &*bs,&*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su);
+    check_status(myrank, f_status, "Allocating boundary coefficients failed");
+
     f_status = fill_l2g(read_key, myrank, nprocs, *nintcf, &*local_global_index, &local_global_index_g, 
             partitioning_map, nintcf_g-nintci_g+1, int_cells_per_proc);
     check_status(myrank, f_status, "Filling l2g failed");
     
-    f_status = fill_lcc_elems_points(read_key, myrank, nprocs, *nintci, *nintcf, *lcc, *points_count, 
+    f_status = fill_lcc_elems_points(file_in, read_key, myrank, nprocs, *nintci, *nintcf, *lcc, *points_count,
             *points, *elems, *local_global_index, local_global_index_g, lcc_g, points_count_g, points_g, 
             &elems_g, int_cells_per_proc);
     check_status(myrank, f_status, "Filling lcc and etc failed");
     
+    f_status = fill_boundary_coef(file_in, read_key, myrank, nprocs, *nintci, *nintcf, nintcf_g, *bs,
+            *be, *bn, *bw, *bl, *bh, *bp, *su, *local_global_index, local_global_index_g,
+            &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g, int_cells_per_proc);
+    check_status(myrank, f_status, "Filling boundary coefficients failed");
+
     f_status = build_lists_g2l_next(nprocs, myrank, partitioning_map, nintcf_g, nextcf_g, &*nintcf, &*nextcf, 
             &*lcc, &*local_global_index, &*global_local_index, &*nghb_cnt, &*nghb_to_rank, 
             &*recv_cnt, &*recv_lst);
@@ -87,14 +95,6 @@ int initialization(char* file_in, int input_key, int part_key, int read_key, int
     check_status(myrank, f_status, "Allocating send lists failed");
     
     exchange_lists(myrank, &*nghb_cnt, &*nghb_to_rank, &*send_cnt, &*send_lst, &*recv_cnt, &*recv_lst);
-    
-    f_status = allocate_boundary_coef(nextcf, &*bs,&*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su);
-    check_status(myrank, f_status, "Allocating boundary coefficients failed");
-    
-    f_status = fill_boundary_coef(read_key, myrank, nprocs, *nintci, *nintcf, *nextci, *nextcf, *bs, 
-            *be, *bn, *bw, *bl, *bh, *bp, *su, *local_global_index, local_global_index_g, 
-            &bs_g, &be_g, &bn_g, &bw_g, &bl_g, &bh_g, &bp_g, &su_g, int_cells_per_proc);
-    check_status(myrank, f_status, "Filling boundary coefficients failed");
 
     // Check LCC
     if(OUTPUT_LCC_G) {
@@ -119,8 +119,8 @@ int initialization(char* file_in, int input_key, int part_key, int read_key, int
         }
     }
 
-    *var = (double*) calloc(sizeof(double), (*nextcf+1));
-    *cgup = (double*) calloc(sizeof(double), (*nextcf+1));
+    *var = (double*) calloc(sizeof(double), (*nintcf+1));
+    *cgup = (double*) calloc(sizeof(double), (*nintcf+1));
     *cnorm = (double*) calloc(sizeof(double), (*nintcf+1));
 
     // initialize the arrays
@@ -136,16 +136,6 @@ int initialization(char* file_in, int input_key, int part_key, int read_key, int
         (*cgup)[i] = 1.0/((*bp)[i]);
     }
 
-    for (i=(*nextci); i<=(*nextcf); i++) {
-        (*var)[i] = 0.0;
-        (*cgup)[i] = 0.0;
-        (*bs)[i] = 0.0;
-        (*be)[i] = 0.0;
-        (*bn)[i] = 0.0;
-        (*bw)[i] = 0.0;
-        (*bh)[i] = 0.0;
-        (*bl)[i] = 0.0;
-    }
 
     // VTK check
     if (OUTPUT_VTK) {
@@ -158,14 +148,14 @@ int initialization(char* file_in, int input_key, int part_key, int read_key, int
                         *nghb_cnt, *nghb_to_rank, *send_cnt, *send_lst,
                         *recv_cnt, *recv_lst, OUTPUT_VTK, VTK_NEIGHBOUR);
     }
-    
+
     //convert global indexes
     converte_global2local_idx(myrank, *global_local_index, *nintci, *nintcf, *lcc, *nghb_cnt,
             *send_cnt, *send_lst, *recv_cnt, *recv_lst);
 
     // Free
     //TODO:code proper memory freeing
-    if((read_key == POSL_INIT_ONE_READ && myrank == 0) || read_key == POSL_INIT_ALL_READ) {
+    if(read_key == POSL_INIT_ONE_READ && myrank == 0) {
 //        free(local_global_index_g);
         for (i = 0; i < (*nintci + 1); i++) {
             free(lcc_g[i]);
@@ -180,9 +170,11 @@ int initialization(char* file_in, int input_key, int part_key, int read_key, int
         free(be_g);
         free(bs_g);
         free(elems_g);
-        free(*global_local_index);
     }
-    
+    if(read_key == POSL_INIT_ALL_READ) {
+        free(elems_g);
+    }
+
     if (DEBUG_ENABLED) {
         log_dbg("Initialization phase complete on process #%d", myrank);
     }

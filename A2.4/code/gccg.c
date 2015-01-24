@@ -21,7 +21,7 @@
 int main(int argc, char *argv[]) {
     int my_rank, num_procs, i;
 
-    const int max_iters = 10000;    /// maximum number of iteration to perform
+    const int max_iters = 600;    /// maximum number of iteration to perform
 
     /** Simulation parameters parsed from the input datasets */
     int nintci, nintcf;    /// internal cells start and end index

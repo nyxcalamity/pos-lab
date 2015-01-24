@@ -36,22 +36,22 @@ int allocate_lcc_elems_points(int read_key, int myrank, int nprocs, int *nintci,
 /**
  * Exchange or copy from global all local data.
  */
-int fill_lcc_elems_points(int read_key, int myrank, int nprocs, int nintci, int nintcf, int **lcc, 
+int fill_lcc_elems_points(char* file_in, int read_key, int myrank, int nprocs, int nintci, int nintcf, int **lcc,
         int points_count, int** points, int* elems, int *local_global_index, int **local_global_index_g, 
         int **lcc_g, int points_count_g, int** points_g, int **elems_g, int *int_cells_per_proc);
 
 /**
  * Allocates local memory for various boundary coefficients.
  */
-int allocate_boundary_coef(int *nextcf, double **bs, double **be, double **bn, double **bw, double **bl, 
+int allocate_boundary_coef(int *nintcf, double **bs, double **be, double **bn, double **bw, double **bl,
         double **bh, double **bp, double **su);
 
 
 /**
  * Exchange local values of boundary coefficients or copy them from global values.
  */
-int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nintcf, int nextci,
-        int nextcf, double *bs, double *be, double *bn, double *bw, double *bl,  double *bh, 
+int fill_boundary_coef(char* file_in, int read_key, int myrank, int nprocs, int nintci, int nintcf, int nintcf_g,
+        double *bs, double *be, double *bn, double *bw, double *bl,  double *bh,
         double *bp, double *su, int *local_global_index, int **local_global_index_g, double **bs_g, 
         double **be_g, double **bn_g, double **bw_g, double **bl_g, double **bh_g, double **bp_g, 
         double **su_g, int *int_cells_per_proc);

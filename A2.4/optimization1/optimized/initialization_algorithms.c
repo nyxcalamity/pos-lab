@@ -27,10 +27,11 @@ int read_init_data(char* file_in, int read_key, int myrank, int *nintci, int *ni
         }
     } else {
         //TODO:implement sheer geometry reading
-        f_status = read_binary_geo(file_in, &*nintci, &*nintcf, &*nextci, &*nextcf, &*lcc, &*bs, 
-                &*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su, &*points_count, &*points, &*elems);
+//        f_status = read_lcc_boundary(file_in, &*nintci, &*nintcf, &*nextci, &*nextcf, &*lcc, &*bs,
+//                &*be, &*bn, &*bw, &*bl, &*bh, &*bp, &*su);
+        f_status = read_geometry(file_in, &*nintci, &*nintcf, &*nextci, &*nextcf,
+                &*points_count, &*points, &*elems);
     }
-    
     return f_status;
 }
 
@@ -198,7 +199,7 @@ int allocate_lcc_elems_points(int read_key, int myrank, int nprocs, int *nintci,
 }
 
 
-int fill_lcc_elems_points(int read_key, int myrank, int nprocs, int nintci, int nintcf, int **lcc, 
+int fill_lcc_elems_points(char* file_in, int read_key, int myrank, int nprocs, int nintci, int nintcf, int **lcc,
         int points_count, int** points, int* elems, int *local_global_index,  int **local_global_index_g,
         int **lcc_g, int points_count_g, int** points_g, int **elems_g, int *int_cells_per_proc) {
     int proc=0, i=0;
@@ -239,7 +240,7 @@ int fill_lcc_elems_points(int read_key, int myrank, int nprocs, int nintci, int 
             MPI_Recv(elems, (nintcf+1)*8, MPI_INT, 0, POSL_MPI_TAG_ELEMENTS, MPI_COMM_WORLD, &status);
         }
     }
-    if (read_key == POSL_INIT_ALL_READ || (read_key == POSL_INIT_ONE_READ && myrank == 0)) {
+    if (read_key == POSL_INIT_ONE_READ && myrank == 0) {
         for(i=nintci; i<nintcf+1; i++) {
             memcpy(lcc[i], lcc_g[local_global_index[i]], 6*sizeof(int));
             memcpy(&(elems[8*i]), &(*elems_g)[local_global_index[i]*8], 8*sizeof(int));
@@ -248,42 +249,48 @@ int fill_lcc_elems_points(int read_key, int myrank, int nprocs, int nintci, int 
             memcpy(points[i], points_g[i], 3*sizeof(int));
         }
     }
+    if (read_key == POSL_INIT_ALL_READ) {
+        read_lcc_local(file_in, nintci, nintcf, lcc, local_global_index);
+        for (i=0; i<points_count; i++) {
+            memcpy(points[i], points_g[i], 3*sizeof(int));
+        }
+    }
     return POSL_OK;
 }
 
 
-int allocate_boundary_coef(int *nextcf, double **bs, double **be, double **bn, double **bw, double **bl, 
+int allocate_boundary_coef(int *nintcf, double **bs, double **be, double **bn, double **bw, double **bl, 
         double **bh, double **bp, double **su) {
-    *bs = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    *bs = (double *) malloc(((*nintcf)+1)*sizeof(double));
     check_alloc(bs, "malloc for bs failed");
     
-    *be = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    *be = (double *) malloc(((*nintcf)+1)*sizeof(double));
     check_alloc(be, "malloc for be failed");
         
-    *bn = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    *bn = (double *) malloc(((*nintcf)+1)*sizeof(double));
     check_alloc(bn, "malloc for bn failed");
     
-    *bw = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    *bw = (double *) malloc(((*nintcf)+1)*sizeof(double));
     check_alloc(bw, "malloc for bw failed");
     
-    *bl = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    *bl = (double *) malloc(((*nintcf)+1)*sizeof(double));
     check_alloc(bl, "malloc for bl failed");
     
-    *bh = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    *bh = (double *) malloc(((*nintcf)+1)*sizeof(double));
     check_alloc(bh, "malloc for bh failed");
     
-    *bp = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    *bp = (double *) malloc(((*nintcf)+1)*sizeof(double));
     check_alloc(bp, "malloc for bp failed");
     
-    *su = (double *) malloc(((*nextcf)+1)*sizeof(double));
+    *su = (double *) malloc(((*nintcf)+1)*sizeof(double));
     check_alloc(su, "malloc for su failed");
 
     return POSL_OK;
 }
 
 
-int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nintcf, int nextci,
-        int nextcf, double *bs, double *be, double *bn, double *bw, double *bl,  double *bh, 
+int fill_boundary_coef(char *file_in, int read_key, int myrank, int nprocs, int nintci, int nintcf, int nintcf_g,
+        double *bs, double *be, double *bn, double *bw, double *bl,  double *bh,
         double *bp, double *su, int *local_global_index, int **local_global_index_g, double **bs_g, 
         double **be_g, double **bn_g, double **bw_g, double **bl_g, double **bh_g, double **bp_g, 
         double **su_g, int *int_cells_per_proc) {
@@ -325,7 +332,7 @@ int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nin
             MPI_Recv(su, (nintcf+1), MPI_DOUBLE, 0, POSL_MPI_TAG_SU, MPI_COMM_WORLD, &status);
         }
     }
-    if (read_key == POSL_INIT_ALL_READ || (read_key == POSL_INIT_ONE_READ && myrank ==0)) {
+    if (read_key == POSL_INIT_ONE_READ && myrank ==0) {
         for(i=nintci; i<nintcf+1; i++) {
             bs[i] = (*bs_g)[local_global_index[i]];
             be[i] = (*be_g)[local_global_index[i]];
@@ -336,6 +343,21 @@ int fill_boundary_coef(int read_key, int myrank, int nprocs, int nintci, int nin
             bp[i] = (*bp_g)[local_global_index[i]];
             su[i] = (*su_g)[local_global_index[i]];
         }
+    }
+    if (read_key == POSL_INIT_ALL_READ) {
+//        for(i=nintci; i<nintcf+1; i++) {
+//            bs[i] = (*bs_g)[local_global_index[i]];
+//            be[i] = (*be_g)[local_global_index[i]];
+//            bn[i] = (*bn_g)[local_global_index[i]];
+//            bw[i] = (*bw_g)[local_global_index[i]];
+//            bl[i] = (*bl_g)[local_global_index[i]];
+//            bh[i] = (*bh_g)[local_global_index[i]];
+//            bp[i] = (*bp_g)[local_global_index[i]];
+//            su[i] = (*su_g)[local_global_index[i]];
+//        }
+        read_boundary_local(file_in, nintci, nintcf, nintcf_g,
+                            bs, be, bn, bw, bl, bh,
+                            bp, su, local_global_index);
     }
     return POSL_OK;
 }

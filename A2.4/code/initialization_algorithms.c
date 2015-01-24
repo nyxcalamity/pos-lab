@@ -35,36 +35,12 @@ int read_init_data(char* file_in, int read_key, int myrank, int *nintci, int *ni
 }
 
 
-void bcast_partitioning(int read_key, int myrank, int **partitioning_map, int *nintci_g, int *nintcf_g,
-        int *nextci_g, int *nextcf_g){
-    if (read_key == POSL_INIT_ONE_READ) {
-        //broadcast partitioning map size
-        if (myrank != 0) {
-            *nintci_g = 0; *nintcf_g = 0;
-            *nextci_g = 0; *nextcf_g = 0;
-        }
-        MPI_Bcast(nintci_g, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(nintcf_g, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(nextci_g, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(nextcf_g, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        
-        int partitioning_size = (*nintcf_g-*nintci_g+1);
-        
-        //broadcast partition map itself
-        if (myrank != 0) {
-            *partitioning_map = (int *) calloc(partitioning_size, sizeof(int));
-        }
-        MPI_Bcast(*partitioning_map, partitioning_size, MPI_INT, 0, MPI_COMM_WORLD);
-    }
-}
-
-
 int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g, 
         int nintcf_g, int nextci_g, int nextcf_g, int *nintci, int *nintcf, int *nextci, int *nextcf, 
         int **lcc_g, int points_count_g, int **points_g, int *elems_g, int *int_cells_per_proc, 
         int *extcell_per_proc, int **local_global_index_g, int **local_global_index, int **partitioning_map) {
     int i=0;
-    idx_t nelems, nnodes, ncommon=4, nparts, objval;
+    idx_t nelems, nnodes, ncommon, nparts, objval;
     idx_t *elem_ptr, *elem_idx, *elem_part, *node_part;
     
     nelems = nintcf_g-nintci_g+1;
@@ -74,8 +50,8 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
     if (((read_key == POSL_INIT_ONE_READ) && (myrank == 0)) || (read_key == POSL_INIT_ALL_READ)) {
         *nintci = 0; *nintcf = 0;
         if (part_key == POSL_PARTITIONING_CLASSIC) {
-            //the last processor always gets different number of cells
             int elem_per_proc = (nelems+(nprocs-1))/nprocs;
+            //the last processor always gets different number of cells
             *nextci = (myrank == nprocs-1) ? nelems-(nprocs-1)*elem_per_proc : elem_per_proc;
             *nintcf = *nextci-1;
             
@@ -92,8 +68,9 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
             }
         } else {
             //initialize variables for metis
-            nnodes = points_count_g;
+            ncommon = 4;
             nparts = nprocs;
+            nnodes = points_count_g;
             elem_ptr = (idx_t *) calloc(nelems+1, sizeof(idx_t));
             elem_idx = (idx_t *) calloc(nelems*8, sizeof(idx_t));
             elem_part = (idx_t *) calloc(nelems, sizeof(idx_t));
@@ -116,6 +93,7 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
                         NULL, NULL, &objval, elem_part, node_part);
             }
             
+            //perform type conversion
             for (i=0; i<nelems; i++) {
                 (*partitioning_map)[i] = (int) elem_part[i];
             }
@@ -127,12 +105,14 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
                 }
             }
             
-            //TODO: consider performance gains when if statement is outside of the loop
             //compute position of last internal cell
-            for (i=0; i<nelems; i++) {
-                if (read_key == POSL_INIT_ONE_READ) {
+            //NOTE:for loop redundancy is introduced to simplify automatic vectorization
+            if (read_key == POSL_INIT_ONE_READ) {
+                for (i=0; i<nelems; i++) {
                     int_cells_per_proc[(*partitioning_map)[i]] += 1;
-                } else {
+                }
+            } else {
+                for (i=0; i<nelems; i++) {
                     if (myrank == (*partitioning_map)[i]) {
                         (*nintcf) += 1;
                     }
@@ -147,6 +127,30 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
         }
     }
     return POSL_OK;
+}
+
+
+void bcast_partitioning(int read_key, int myrank, int **partitioning_map, int *nintci_g, int *nintcf_g,
+        int *nextci_g, int *nextcf_g){
+    if (read_key == POSL_INIT_ONE_READ) {
+        //broadcast partitioning map size
+        if (myrank != 0) {
+            *nintci_g = 0; *nintcf_g = 0;
+            *nextci_g = 0; *nextcf_g = 0;
+        }
+        MPI_Bcast(nintci_g, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(nintcf_g, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(nextci_g, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(nextcf_g, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        
+        int partitioning_size = (*nintcf_g-*nintci_g+1);
+        
+        //broadcast partition map itself
+        if (myrank != 0) {
+            *partitioning_map = (int *) calloc(partitioning_size, sizeof(int));
+        }
+        MPI_Bcast(*partitioning_map, partitioning_size, MPI_INT, 0, MPI_COMM_WORLD);
+    }
 }
 
 

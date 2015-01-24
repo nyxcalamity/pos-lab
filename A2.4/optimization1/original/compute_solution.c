@@ -93,7 +93,7 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
                 mpi_block_length[nghb_idx][nc] = 1;
                 mpi_displacements[nghb_idx][nc] = send_lst[nghb_idx][nc];
             }
-            
+            //TODO:use indexed_block to potentially increase FLOPS
             MPI_Type_indexed(send_cnt[nghb_idx], mpi_block_length[nghb_idx], mpi_displacements[nghb_idx], 
                 MPI_DOUBLE, &index_type[nghb_idx]);
             MPI_Type_commit(&index_type[nghb_idx]);

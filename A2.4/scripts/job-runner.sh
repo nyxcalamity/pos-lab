@@ -23,16 +23,17 @@ cd $WDIR
 rm -rf $BASE_DIR/stats/*
 
 #generate job files
-NUM_PROC=(2 3 4 5 6 7 8)
-for i in ${NUM_PROC[@]}; do
-    $SCRIPT_DIR/pa-min-req.sh $i $CODE $SCRIPT_DIR
-done
-
-#performance analysis task 1
+#minimum performance requirements task
 #NUM_PROC=(2 3 4 5 6 7 8)
 #for i in ${NUM_PROC[@]}; do
-#    $SCRIPT_DIR/pa-task1.sh $i $CODE $SCRIPT_DIR
+#    $SCRIPT_DIR/pa-min-req.sh $i $CODE $SCRIPT_DIR
 #done
+
+#performance analysis task 1
+NUM_PROC=(2 3 4 5 6 7 8)
+for i in ${NUM_PROC[@]}; do
+    $SCRIPT_DIR/pa-task1.sh $i $CODE $SCRIPT_DIR
+done
 
 #performance analysis task 2
 #NUM_PROC=(2 3 4 5 6 7 8 12 16 20 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 96 112 128 144 160 176 192 208 224 240 256)
@@ -46,7 +47,7 @@ for i in ${NUM_PROC[@]}; do
 done
 
 #wait until jobs are finished
-while [ ! -f $BASE_DIR/stats/job24-np8.out ]
+while [ ! -f $BASE_DIR/stats/job24-np${#NUM_PROC[@]}.out ]
 do
   sleep 5
 done

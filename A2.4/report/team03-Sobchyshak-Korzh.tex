@@ -13,6 +13,8 @@
 %\usepackage{times} % Uncomment to use the Times New Roman font
 \usepackage{hyperref}
 \usepackage{listings}
+\usepackage{caption}
+\usepackage{subcaption}
 
 
 %----------------------------------------------------------------------------------------
@@ -29,11 +31,7 @@
 %	SECTION 1
 %----------------------------------------------------------------------------------------
 \section{Introduction}
-Programming of Supercomputers lab course deals to a great extent with a code that simulates 
-flow and heat transfer within arbitrary complex geometries with fixed boundaries, also known 
-as an AVL FIRE\textregistered\ benchmark. Most of the effort was focused on parallelizing and 
-optimizing the benchmark code in order to prepare it for execution in multiprocessor environments.
-During the semester we had to complete the following tasks:
+Programming of Supercomputers lab course deals to a great extent with a code that simulates flow and heat transfer within arbitrary complex geometries with fixed boundaries, also known as an AVL FIRE\textregistered\ benchmark. Most of the effort was focused on parallelizing and optimizing the benchmark code in order to prepare it for execution in multiprocessor environments. During the semester we had to complete the following tasks:
 \begin{itemize}
 	\item single-core optimization
 	\item analysis of I/O behavior
@@ -41,37 +39,27 @@ During the semester we had to complete the following tasks:
 	\item 3-steps MPI parallelization
 	\item performance tuning
 \end{itemize}
-In this report we will take a brief look at the summary of single-core optimization results 
-and then move forward to parallelization aspects and their respective in depth analysis. 
-It is important to note that all the measurements were carried out on a SuperMUC thin node.
+In this report we will take a brief look at the summary of single-core optimization results and then move forward to parallelization aspects and their respective in depth analysis. It is important to note that all the measurements were carried out on a SuperMUC thin node.
  
 %----------------------------------------------------------------------------------------
 %	SECTION 2
 %----------------------------------------------------------------------------------------
 \section{Single-core optimization}
-Quite often the great speedup potential of single-core execution of applications is overseen by
-many developers and instead all the effort is put into the parallelization step. This leads to
-inefficient usage of resources and poor scalability.
+Quite often the great speedup potential of single-core execution of applications is overseen by many developers and instead all the effort is put into the parallelization step. This leads to inefficient usage of resources and poor scalability.
 \\\\
-This part of the course was focused solely on sequential optimization as a result of which 
-we wanted to see how different optimization techniques relate to each other and what potential 
-benefits our simulation code might obtain from them.
+This part of the course was focused solely on sequential optimization as a result of which we wanted to see how different optimization techniques relate to each other and what potential benefits our simulation code might obtain from them.
 \\\\
-The solver's execution was split into 3 main phases: input, computation and output. Analysis 
-included collecting the following key characteristics for the computation phase using 2 input 
-files (tjunc, cojack) and several optimization levels (-O1, -O2, -O3):
+The solver's execution was split into 3 main phases: input, computation and output. Analysis included collecting the following key characteristics for the computation phase using 2 input files (tjunc, cojack) and several optimization levels (-O1, -O2, -O3):
 \begin{itemize}
 	\item execution time
 	\item Mflops
 	\item L2 cache miss rate
 	\item L3 cache miss rate
 \end{itemize}
-In addition we analysed the effect of vectorization on the computation phase using various
-compiler flags (-[no]-vec, -vec-report, -xhost).
+In addition we analysed the effect of vectorization on the computation phase using various compiler flags (-[no]-vec, -vec-report, -xhost).
 
 \subsection{Performance measurements using PAPI}
-In order to collect the measurements following hardware measurement counters of the
-Performance Application Programming Interface (PAPI) were used:\\
+In order to collect the measurements following hardware measurement counters of the Performance Application Programming Interface (PAPI) were used:\\
 \begin{center}
 \begin{tabular}{l|c}
 	\hline
@@ -125,15 +113,160 @@ While carrying out measurements of vectorized versus novectorised banchmark runt
 %----------------------------------------------------------------------------------------
 %	SECTION 3
 %----------------------------------------------------------------------------------------
-\section{I/O performance analysis}
+\subsection{I/O performance analysis}
 Manipulating data files is very slow compared to accessing the main memory. This can be considerably improved by using a more concise data format such as binary. After comparing input file sizes and the time it takes to load them we have noticed a drastic fall in both processing time and binary file sizes. Visualized comparison of loading times and file sizes is shown on figure \ref{fig:3}.
 
 \begin{figure}[h!]
-\begin{center}
-\includegraphics[width=0.8\textwidth]{time-size}
-\caption{Comparison of file sizes and their read times}
-\label{fig:3}
-\end{center}
+	\begin{center}
+		\includegraphics[width=0.8\textwidth]{time-size}
+		\caption{Comparison of file sizes and their read times}
+		\label{fig:3}
+	\end{center}
 \end{figure}
+
+%----------------------------------------------------------------------------------------
+%	SECTION 4
+%----------------------------------------------------------------------------------------
+\section{MPI parallelization}
+The goal of entire parallelization part was to generate a parallel optimal version of the Fire benchmark which would scale in a multi-core environment.
+
+\subsection{Data distribution}
+We started off with an implementation of a computation domain and initial data distribution with focus on two types of data partitioning, namely:
+\begin{itemize}
+	\item classic distribution
+	\item METIS distributions (nodal and dual)
+\end{itemize}
+
+\subsubsection{Classical distribution}
+The core principle of this distribution was to separate all cells almost equally among available processors. Thus volume cells are partitioned in the order given by the input file: first k cells to the first process, next k cells to the second one, and so on. Such approach does not consider special location of the cells and thus the resulting partition map looks slightly random and very mixed as can be seen from figure \ref{fig:4}
+\begin{figure}[h!]
+	\begin{center}
+		\includegraphics[width=0.8\textwidth]{pent-classic.jpg}
+		\caption{Cells of single partition in a classic distribution model}
+		\label{fig:4}
+	\end{center}
+\end{figure}
+Key issue in this part was to figure out how our geometry looks and how we can work with it, thus understand binary file format and its content. The biggest role in this process played the following arrays:
+\begin{itemize}
+	\item[lcc] - link cell-to-cell array, which stores cell topology
+	\item[elems] - IDs of nodes that form a cell
+	\item[points] - coordinates of nodes
+\end{itemize}
+
+\subsubsection{METIS partitioning}
+The latter data distribution strategy employd a specail graph partitioning library METIS where we utilized two different distributions:
+\begin{itemize}
+	\item dual (METIS PartMeshDual) - partitions a mesh into k parts based on a partitioning of the mesh’s dual graph (i.e., each element becomes a graph vertex)
+	\item nodal (METIS PartMeshNodal) - partitions a mesh into k parts based on a partitioning of the mesh’s nodal graph (i.e., each node becomes a graph vertex)
+\end{itemize}
+Examples of the partitioned data visualisation can be found on figure \ref{fig:5}.
+\begin{figure}
+	\centering
+	\begin{subfigure}[b]{0.45\textwidth}
+		\includegraphics[width=\textwidth]{drall-dual.jpg}
+		\caption{Dual partitioning of drall data}
+		\label{fig:dual}
+	\end{subfigure}%
+	\begin{subfigure}[b]{0.45\textwidth}
+		\includegraphics[width=\textwidth]{drall-nodal.jpg}
+		\caption{Nodal partitioning of drall data}
+		\label{fig:nodal}
+	\end{subfigure}
+	\caption{METIS data distribution visualisation}\label{fig:5}
+\end{figure}
+
+\subsection{Data reading strategies}
+One of the key issues of the first milestone was concerned with data reading strategy. It was crucial since some of the binary files would be as big as 45MB. We had two options to consider:
+\begin{itemize}
+	\item Oneread - only one processor reads the data and communicates it among others
+	\item Allread - reading data on each processor
+\end{itemize}
+While oneread strategy was rather straightforward and involved only proper MPI implementation, allread strategy could be done in several ways. 
+\begin{enumerate}
+	\item One could read geometry data in each process, then individually perform data partitioning using either classic or METIS approaches and, assuming that data distribution is a deterministic operation (for same geomentry partitioning will always stay the same), simply proceed with reading required values (bs, be, etc arrays) and performing the computation.
+	\item Alternatively, each process could still read basic geometry data, then perform partitioning only on one process and communicate it to other processes, after which those processes would read necessary values (bs, be, etc arrays) and start the computation.
+\end{enumerate}
+We decided to stick with the first option leaving analysis of the latter one for the last milestone and as it turned out former approach was much more performant, since no process had to wait for another in order to continue with computations. Also the latter approach would add up to MPI communication overhed which is another unwanted drawback.
+
+\subsection{Communication model}
+At this point we would already have read and distributed data for further computation, however, to perform the computation on any cell we require values of all its neighbours. For inner cells of the partition it is easy to do, since all of them reside in the local memory of the current execution core, however, for cells with neghbors in onther cores (ghost cells) things become a bit tricky.
+\\\\
+To tackle this problem we created send and receive lists for all neighbours of each process which would hold indexes of cells to be exchanged with the corresponding neighbour. We performed two cycles of inner cell processing in order to create send and receive counters first (send\_cnt and recv\_cnt) and then perform memory allocation and actual array filling. Our send and receive lists are 2D arrays where their 1st dimension corresponds to neighbor partition and 2nd dimenstion - to the local index of a ghost cell. Visualisation of send lists is provided in figure \ref{fig:6}
+\begin{figure}[h!]
+	\begin{center}
+		\includegraphics[width=0.8\textwidth]{send-listst.jpg}
+		\caption{Inner cells and send lists}
+		\label{fig:6}
+	\end{center}
+\end{figure}
+\\\\
+The fact that cells might have common ghost neighbours was also taken into account, so repeating indices of the receive list were deleted from the array.
+\\\\
+As a side note, all of the global-to-local mappings were achived using various mapping arrays, like nghb\_to\_rank, g2l, l2g, etc.
+
+\subsubsection{Non-Blocking communications}
+In such a communication matrix where we don't have constant controll over the number of processes (since the coude could be run with 8, 256 or more processes) and order of data exchenge dead locks may become a threat. To avoid this issue and to increase performance of our code we used non-blocking MPI operations where possible.
+
+\subsection{Main loop parallelization}
+As a final prallelisation step, we needed to adjust computation phase to utilize MPI calls. As direc vectors store the current solution state in the main loop, computing the cell value of the direc2 vector requires access to direc1 values of the cell’s neighbours, which might be outside of the local domain. For that purpose we need to use MPI non-blocking exchange functions and our previously filled send and receive lists. Now we know how many elements are to be received and from which processes.
+\\\\
+Earlier in the lab we discovered that usage of an MPI Indexed Data Type is advantageous in situations when we don't want to create small buffers in order to exchange parts of a big array. We took full advantage of the approache here as well, using MPI\_Type\_indexed.
+
+\subsection{Performance tuning}
+The final step of the benchmark parallelisation and optimization consisted of code tuning. Minimum requirement was to achieve \textit{linear speedup} of the computation phase up to 8 processes for \textit{pent} input geometry using the \textit{dual} distribution. Apparently, due to proper coding styles and also due to the fact that we didn't start working on the performance analysis code untill most of our TODOs (planned tasks) were resolved, already from the start we had linear speedup depicted on figure \ref{fig:-1}. However, we still performed recommended performance analysis and couple of optimizations described further.
+
+\subsubsection{Mesurements}
+Before we dig into the optimizations and peformance analysis it is usefull to describe our time measurement approach and some of the tools we have created for metric collection. 
+
+\subparagraph{Timing}
+Since we needed to optimize only specific parts of the application and not the total runtime, we explicitly blocked all MPI operations between application phases (initialization, computation, finalization) using MPI\_Barrier. This made time measurement using MPI\_Wtime() extremely easy, since didn't have to worry if all codes arrived to the Wtime call at approximatelly same time or if some of the processes were still stuck in the previous phase. We used MPI\_Reduce to collect global minimum and maximum times for the specified phase and so obtained the actuall time measurement of each application phase.
+
+\subparagraph{Bash framework}
+Furthermore, since we had to perform numerous mesurements with different number of processors and various codes (optimized and non-optimized versions), we decided to create a small bash framework: our script would receive number of processors and an optimization identifier (e.g. optimization2) after which it would automatically generate proper job files (with corect number of nodes and etc.), submit them, wait for the jobs to complete and then combine all the outputs into one file and errors into another. In such a way the whole process of job submission and data collections was signifiantly simplified.
+
+\subsubsection{Analysis tools}
+\subparagraph{Score-P}
+For a proper code analysis we used Score-P performance measurement infrastructure - a highly scalable and easy-to-use tool suite for profiling, event tracing, and online analysis of HPC applications. It can be controlled via environment variables and is as easy to set up as to just add it to the makefile. Next run of the application will create Score-P analysis files in the previously specified directories. After that one has to use specific tools to visualise the output and investigate botlenecks.
+
+\subparagraph{Cube}
+A tool used for viewing and analyzing profile data, which is usefull to take down big botlnecks. 
+
+\subparagraph{Vampir}
+Tool used for investigation of trace information, which is usfull for indepth MPI overhead analysis. It also allowed to identify low FLOPS regions in our code as in figure \ref{fig:7}.
+\begin{figure}[h!]
+	\begin{center}
+		\includegraphics[width=0.8\textwidth]{iter-pent-dual-allread-8-Counter_Data_Timeline_traces.png}
+		\caption{Regions with low FLOPS}
+		\label{fig:7}
+	\end{center}
+\end{figure}
+
+\subparagraph{TotalView}
+Is a set of tools which provide unprecedented control over processes and thread execution, along with deep visibility into program states and data. Which was of great use for per processor debugging. However, on SuperMUC we could use it only with intel compiler.
+
+\subsubsection{File reading optimization}
+One of the early things we noticed using Cube is that sometimes initialization phase would take even more time than the actual computation phase. After some investigation we came with an idea of reading only speecific data from our input files. Since those can be as big as 45Mb reading everything on all processors takes too much time. Achieved performance can be seen on figure \ref{fig:-1} as compared to the original one. It affected the fastest input data processing strategy \textit{allread} thus potentially decreasing runtime of the whole application.
+
+\subsubsection{MPI data type optimization}
+Analysing Vampir timeline tracer we noticed that two very close MPI calls which don't have much computation in between were actually separated by a big block of computation. Analysing that block we noticed that much of its time was spent on allocating memory for MPI\_Type\_indexed block length arrays and filling in the correct values. Since those operatios take too much space and our block length actually never changes, we switched to using MPI\_Type\_create\_indexed\_block which gave us a minor improvement. Vampire visualisation for the computation phase can be found in the figure \ref{fig:8}.
+\begin{figure}
+	\centering
+	\begin{subfigure}[h]{\textwidth}
+		\includegraphics[width=\textwidth]{iter-pent-dual-allread-8-Function_Summary_traces.png}
+		\caption{MPI Overhead}
+		\label{fig:overhead}
+	\end{subfigure}
+	\begin{subfigure}[h]{\textwidth}
+		\includegraphics[width=\textwidth]{iter-pent-dual-allread-8-Master_Timeline_traces.png}
+		\caption{Timeline traces}
+		\label{fig:traces}
+	\end{subfigure}
+	\caption{Computation phase trace timeline}\label{fig:8}
+\end{figure}
+
+\subsubsection{Memory leaks}
+While using TotalView we noticed a lot of memory leaks in our code and also to a lesser extent in the provided benchmark. All of those were fixed and merged into the final version of the code.
+
+
 %----------------------------------------------------------------------------------------
 \end{document}

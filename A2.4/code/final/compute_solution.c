@@ -20,7 +20,7 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     MPI_Status status;
     MPI_Request request_send[nghb_cnt], request_recv[nghb_cnt];
     MPI_Datatype index_type[nghb_cnt];
-    int *mpi_block_length[nghb_cnt], *mpi_displacements[nghb_cnt];
+    int *mpi_displacements[nghb_cnt];
     
     /** buffers used to resend direc1 */
     int nghb_idx=0;
@@ -46,7 +46,7 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     resref=resref_g;
     resref = sqrt(resref);
     if (myrank == 0) {
-        if ( resref < 1.0e-15 ) {
+        if (resref < 1.0e-15) {
             fprintf(stderr, "Residue sum less than 1.e-15 - %lf\n", resref);
             MPI_Abort(MPI_COMM_WORLD, myrank);
             return 0;
@@ -54,20 +54,15 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     }
 
     /** the computation vectors */
-    double *direc1 = (double *) calloc(sizeof(double), (nextcf + 1));
-    double *direc2 = (double *) calloc(sizeof(double), (nextcf + 1));
-    double *adxor1 = (double *) calloc(sizeof(double), (nintcf + 1));
-    double *adxor2 = (double *) calloc(sizeof(double), (nintcf + 1));
-    double *dxor1 = (double *) calloc(sizeof(double), (nintcf + 1));
-    double *dxor2 = (double *) calloc(sizeof(double), (nintcf + 1));
+    double *direc1 = (double *) calloc(sizeof(double), (nextcf+1));
+    double *direc2 = (double *) calloc(sizeof(double), (nextcf+1));
+    double *adxor1 = (double *) calloc(sizeof(double), (nintcf+1));
+    double *adxor2 = (double *) calloc(sizeof(double), (nintcf+1));
+    double *dxor1 = (double *) calloc(sizeof(double), (nintcf+1));
+    double *dxor2 = (double *) calloc(sizeof(double), (nintcf+1));
     
     //initialize mpi indexed data type arrays
     for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
-        if ((mpi_block_length[nghb_idx] = (int *) malloc(send_cnt[nghb_idx]*sizeof(int))) == NULL) {
-            fprintf(stderr, "malloc(mpi_block_length) failed\n");
-            MPI_Abort(MPI_COMM_WORLD, myrank);
-            return -1;
-        }
         if ((mpi_displacements[nghb_idx] = (int *) malloc(send_cnt[nghb_idx]*sizeof(int))) == NULL) {
             fprintf(stderr, "malloc(mpi_displacements) failed\n");
             MPI_Abort(MPI_COMM_WORLD, myrank);
@@ -90,11 +85,10 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
 
             //initialize and register mpi data type
             for(nc=0; nc<send_cnt[nghb_idx]; ++nc) {
-                mpi_block_length[nghb_idx][nc] = 1;
                 mpi_displacements[nghb_idx][nc] = send_lst[nghb_idx][nc];
             }
-            
-            MPI_Type_indexed(send_cnt[nghb_idx], mpi_block_length[nghb_idx], mpi_displacements[nghb_idx], 
+            //TODO:use indexed_block to potentially increase FLOPS
+            MPI_Type_create_indexed_block(send_cnt[nghb_idx], 1, mpi_displacements[nghb_idx], 
                 MPI_DOUBLE, &index_type[nghb_idx]);
             MPI_Type_commit(&index_type[nghb_idx]);
             
@@ -236,8 +230,8 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     free(dxor1);
     free(dxor2);
     free(resvec);
+    
     for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
-        free(mpi_block_length[nghb_idx]);
         free(mpi_displacements[nghb_idx]);
     }
     

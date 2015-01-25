@@ -40,12 +40,12 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
     int i=0;
     idx_t nelems, nnodes, ncommon, nparts, objval;
     idx_t *elem_ptr, *elem_idx, *elem_part, *node_part;
-    
-    nelems = nintcf_g-nintci_g+1;
-    *partitioning_map = (int *) calloc(sizeof(int), (nintcf_g-nintci_g+1));
-    check_allocation(myrank, partitioning_map, "Partitioning map allocation failed");
-    
+
     if (((read_key == POSL_INIT_ONE_READ) && (myrank == 0)) || (read_key == POSL_INIT_ALL_READ)) {
+        nelems = nintcf_g-nintci_g+1;
+        *partitioning_map = (int *) calloc(sizeof(int), (nintcf_g-nintci_g+1));
+        check_allocation(myrank, partitioning_map, "Partitioning map allocation failed");
+
         *nintci = 0; *nintcf = 0;
         if (part_key == POSL_PARTITIONING_CLASSIC) {
             int elem_per_proc = (nelems+(nprocs-1))/nprocs;
@@ -122,6 +122,12 @@ int partition(int part_key, int read_key, int myrank, int nprocs, int nintci_g,
                 *nintcf = int_cells_per_proc[myrank];
             }
             *nextci = (*nintcf)--;
+
+            // Free variables used by metis
+            free(elem_ptr);
+            free(elem_idx);
+            free(elem_part);
+            free(node_part);
         }
     }
     return POSL_OK;

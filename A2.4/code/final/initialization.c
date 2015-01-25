@@ -153,11 +153,23 @@ int initialization(char* file_in, int input_key, int part_key, int read_key, int
     converte_global2local_idx(myrank, *global_local_index, *nintci, *nintcf, *lcc, *nghb_cnt,
             *send_cnt, *send_lst, *recv_cnt, *recv_lst);
 
+    if (DEBUG_ENABLED) {
+        log_dbg("Initialization phase complete on process #%d", myrank);
+    }
+    /********** END INITIALIZATION **********/
+    for (i=0; i<*nghb_cnt; ++i) {
+        write_pstats_communication(input_key, part_key, myrank, nprocs, *nghb_cnt, i,
+                *send_cnt, *send_lst, *recv_cnt, *recv_lst);
+    }
+
     // Free
     //TODO:code proper memory freeing
     if(read_key == POSL_INIT_ONE_READ && myrank == 0) {
-//        free(local_global_index_g);
-        for (i = 0; i < (*nintci + 1); i++) {
+        for (i=0; i<nprocs; i++) {
+            free(local_global_index_g[i]);
+        }
+        free(local_global_index_g);
+        for (i = 0; i < (nintcf_g + 1); i++) {
             free(lcc_g[i]);
         }
         free(lcc_g);
@@ -169,19 +181,15 @@ int initialization(char* file_in, int input_key, int part_key, int read_key, int
         free(bn_g);
         free(be_g);
         free(bs_g);
-        free(elems_g);
     }
-    if(read_key == POSL_INIT_ALL_READ) {
+    if( read_key == POSL_INIT_ALL_READ || (read_key == POSL_INIT_ONE_READ && myrank == 0) ) {
         free(elems_g);
+        for ( i = 0; i < points_count_g; i++ ) {
+            free(points_g[i]);
+        }
+        free(points_g);
     }
+    free(partitioning_map);
 
-    if (DEBUG_ENABLED) {
-        log_dbg("Initialization phase complete on process #%d", myrank);
-    }
-    /********** END INITIALIZATION **********/
-    for (i=0; i<*nghb_cnt; ++i) {
-        write_pstats_communication(input_key, part_key, myrank, nprocs, *nghb_cnt, i, 
-                *send_cnt, *send_lst, *recv_cnt, *recv_lst);
-    }
     return 0;
 }

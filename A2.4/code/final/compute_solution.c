@@ -236,6 +236,10 @@ int compute_solution(int nprocs, int myrank, const int max_iters, int nintci, in
     free(dxor1);
     free(dxor2);
     free(resvec);
+    for (nghb_idx=0; nghb_idx<nghb_cnt; ++nghb_idx) {
+        free(mpi_block_length[nghb_idx]);
+        free(mpi_displacements[nghb_idx]);
+    }
     
     if (DEBUG_ENABLED) {
         log_dbg("Computation phase complete on process #%d", myrank);

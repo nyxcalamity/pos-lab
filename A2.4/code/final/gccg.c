@@ -161,6 +161,8 @@ int main(int argc, char *argv[]) {
     free(be);
     free(bs);
     free(elems);
+    free(global_local_index);
+    free(local_global_index);
 
     for ( i = 0; i < nintcf + 1; i++ ) {
         free(lcc[i]);

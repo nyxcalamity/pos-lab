@@ -1,4 +1,6 @@
-This file contains some of the agreed upon code conventions:
+C++ Code Styles (http://google-styleguide.googlecode.com/svn/trunk/cppguide.html) are considered to
+be the base for this project. The next points only alter or extend them:
+
 - every comment is to be separated from a comment delimiter by a space and to be started with a capital
 letter
 // Like this

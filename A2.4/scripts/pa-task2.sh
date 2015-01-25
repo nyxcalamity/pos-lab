@@ -34,29 +34,29 @@ echo "echo \"-------------------------------------------------------------------
 echo "echo \"Testing PENT data\"" >> $FILE_NAME
 echo "echo \"---------------------------------------------------------------------------------------\"" >> $FILE_NAME
 echo "echo \"[INFO] NODAL\"" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/pent.geo.bin nodal oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/pent.geo.bin nodal oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/pent.geo.bin nodal oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/pent.geo.bin nodal oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/pent.geo.bin nodal oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/pent.geo.bin nodal oneread" >> $FILE_NAME
 echo "echo \"[INFO] DUAL\"" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/pent.geo.bin dual oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/pent.geo.bin dual oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/pent.geo.bin dual oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/pent.geo.bin dual oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/pent.geo.bin dual oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/pent.geo.bin dual oneread" >> $FILE_NAME
 echo "echo \"[INFO] CLASSIC\"" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/pent.geo.bin classic oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/pent.geo.bin classic oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/pent.geo.bin classic oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/pent.geo.bin classic oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/pent.geo.bin classic oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/pent.geo.bin classic oneread" >> $FILE_NAME
 echo "echo \"---------------------------------------------------------------------------------------\"" >> $FILE_NAME
 echo "echo \"Testing COJACK data\"" >> $FILE_NAME
 echo "echo \"---------------------------------------------------------------------------------------\"" >> $FILE_NAME
 echo "echo \"[INFO] NODAL\"" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin nodal oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin nodal oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin nodal oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin nodal oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin nodal oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin nodal oneread" >> $FILE_NAME
 echo "echo \"[INFO] DUAL\"" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin dual oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin dual oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin dual oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin dual oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin dual oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin dual oneread" >> $FILE_NAME
 echo "echo \"[INFO] CLASSIC\"" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin classic oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin classic oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin classic oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin classic oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin classic oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin classic oneread" >> $FILE_NAME

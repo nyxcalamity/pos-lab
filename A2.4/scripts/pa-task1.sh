@@ -34,21 +34,21 @@ echo "echo \"-------------------------------------------------------------------
 echo "echo \"Testing DRALL data\"" >> $FILE_NAME
 echo "echo \"---------------------------------------------------------------------------------------\"" >> $FILE_NAME
 echo "echo \"[INFO] ONEREAD\"" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/drall.geo.bin nodal oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/drall.geo.bin nodal oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/drall.geo.bin nodal oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/drall.geo.bin nodal oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/drall.geo.bin nodal oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/drall.geo.bin nodal oneread" >> $FILE_NAME
 echo "echo \"[INFO] ALLREAD\"" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/drall.geo.bin nodal allread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/drall.geo.bin nodal allread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/drall.geo.bin nodal allread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/drall.geo.bin nodal allread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/drall.geo.bin nodal allread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/drall.geo.bin nodal allread" >> $FILE_NAME
 echo "echo \"---------------------------------------------------------------------------------------\"" >> $FILE_NAME
 echo "echo \"Testing COJACK data\"" >> $FILE_NAME
 echo "echo \"---------------------------------------------------------------------------------------\"" >> $FILE_NAME
 echo "echo \"[INFO] ONEREAD\"" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin nodal oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin nodal oneread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin nodal oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin nodal oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin nodal oneread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin nodal oneread" >> $FILE_NAME
 echo "echo \"[INFO] ALLREAD\"" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin nodal allread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin nodal allread" >> $FILE_NAME
-echo "mpiexec -n $NP $EXEC ./code/data/cojack.geo.bin nodal allread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin nodal allread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin nodal allread" >> $FILE_NAME
+echo "mpiexec -n $NP $EXEC ./code/final/data/cojack.geo.bin nodal allread" >> $FILE_NAME

@@ -9,9 +9,9 @@ WDIR=$(pwd)
 #store code location
 CODE=$1
 if [ -z "$CODE" ]; then
-    CODE=$BASE_DIR/code
+    CODE=$BASE_DIR/code/final
 else 
-    CODE=$BASE_DIR/$CODE/optimized
+    CODE=$BASE_DIR/code/$CODE/optimized
 fi
 
 #make the code

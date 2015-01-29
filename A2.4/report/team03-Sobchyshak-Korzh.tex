@@ -40,7 +40,6 @@ Programming of Supercomputers lab course deals to a great extent with a code tha
 	\item performance tuning
 \end{itemize}
 In this report we will take a brief look at the summary of single-core optimization results and then move forward to parallelization aspects and their respective in depth analysis. It is important to note that all the measurements were carried out on a SuperMUC thin node.
- 
 %----------------------------------------------------------------------------------------
 %	SECTION 2
 %----------------------------------------------------------------------------------------
@@ -123,7 +122,6 @@ Manipulating data files is very slow compared to accessing the main memory. This
 		\label{fig:3}
 	\end{center}
 \end{figure}
-
 %----------------------------------------------------------------------------------------
 %	SECTION 4
 %----------------------------------------------------------------------------------------
@@ -191,7 +189,7 @@ Examples of the partitioned data visualisation can be found on figure \ref{fig:5
 \end{figure}
 
 
-\subsection{Data reading strategies}
+\subsubsection{Data reading strategies}
 One of the key issues of the first milestone was concerned with data reading strategy. It was crucial since some of the binary files would be as big as 45MB. We had two options to consider:
 \begin{itemize}
 	\item \textit{Oneread} - only one processor reads the data and communicates it among others
@@ -216,7 +214,7 @@ To tackle this problem we created send and receive lists for all neighbours of e
 	\end{center}
 \end{figure}
 \\\\
-The fact that cells might have common ghost neighbours was also taken into account, so repeating indices of the receive list were deleted from the array.
+The fact that cells might have common ghost neighbours was also taken into account, so repeating indices of the receive list were not added to the array.
 \\\\
 As a side note, all of the global-to-local mappings were achieved using various mapping arrays, like \textit{nghb\_to\_rank}, \textit{g2l}, \textit{l2g}, etc.
 
@@ -228,8 +226,8 @@ As a final prallelisation step, we needed to adjust computation phase to utilize
 \\\\
 Earlier in the lab we discovered that usage of an MPI Indexed Data Type is advantageous in situations when we don't want to create small buffers in order to exchange parts of a big array. We took full advantage of the approach here as well, using \textit{MPI\_Type\_indexed}.
 
-\subsection{Performance tuning}
-The final step of the benchmark parallelisation and optimization consisted of code tuning. Minimum requirement was to achieve \textit{linear speedup} of the computation phase up to 8 processes for \textit{pent} input geometry using the \textit{dual} distribution. Apparently, due to proper coding styles and also due to the fact that we didn't start working on the performance analysis code untill most of our TODOs (planned tasks) were resolved, already from the start we had linear speedup depicted on figure \ref{fig:11}. Also we had rather low MPI overhead (excluding \textit{MPI\_Init} and \textit{MPI\_Finalize}) as shown on the figure \ref{fig:12}. However, we still performed recommended performance analysis and couple of optimizations described further.
+\section{Performance tuning}
+The final step of the benchmark parallelisation and optimization focused on code tuning. Minimum requirement was to achieve \textit{linear speedup} of the computation phase up to 8 processes for \textit{pent} input geometry using the \textit{dual} distribution. Apparently, due to proper coding styles and also due to the fact that we didn't start working on the performance analysis code untill most of our TODOs (planned tasks) were resolved, already from the start we had linear speedup depicted on figure \ref{fig:11}. Also we had rather low MPI overhead (excluding \textit{MPI\_Init} and \textit{MPI\_Finalize}) as shown on the figure \ref{fig:12}. However, we still performed recommended performance analysis and couple of optimizations described further.
 \begin{figure}[h!]
 	\begin{center}
 		\includegraphics[width=0.8\textwidth]{pent_computation_speedup_1-8proc.png}
@@ -245,7 +243,7 @@ The final step of the benchmark parallelisation and optimization consisted of co
 	\end{center}
 \end{figure}
 
-\subsubsection{Mesurements}
+\subsection{Mesurements}
 Before we dig into the optimizations and performance analysis it is useful to describe our time measurement approach and some of the tools we have created for metric collection. 
 
 \subparagraph{Timing}
@@ -254,7 +252,7 @@ Since we needed to optimize only specific parts of the application and not the t
 \subparagraph{Bash framework}
 Furthermore, since we had to perform numerous measurements with different number of processors and various codes (optimized and non-optimized versions), we decided to create a small bash framework: our script would receive number of processors and an optimization identifier (e.g. \textit{optimization2}) after which it would automatically generate proper job files (with correct number of nodes and etc.), submit them, wait for the jobs to complete and then combine all the outputs into one file and errors into another. In such a way the whole process of job submission and data collections was significantly simplified.
 
-\subsubsection{Analysis tools}
+\subsection{Analysis tools}
 
 \subparagraph{Score-P}
 For a proper code analysis we used Score-P performance measurement infrastructure - a highly scalable and easy-to-use tool suite for profiling, event tracing, and online analysis of HPC applications. It can be controlled via environment variables and is as easy to set up as to just add it to the makefile. Next run of the application will create Score-P analysis files in the previously specified directories. After that one has to use specific tools to visualise the output and investigate bottlenecks.
@@ -273,9 +271,9 @@ Tool used for investigation of trace information, which is useful for in-depth M
 \end{figure}
 
 \subparagraph{TotalView}
-Is a set of tools which provide unprecedented control over processes and thread execution, along with deep visibility into program states and data. Which was of great use for per processor debugging. However, on SuperMUC we could use it only with intel compiler.
+Is a set of tools which provide unprecedented control over processes and thread execution, along with deep visibility into program states and data, which was of great use for per processor debugging. However, on SuperMUC we could use it only with intel compiler.
 
-\subsubsection{File reading optimization}
+\subsection{File reading optimization}
 One of the early things we noticed using Cube is that sometimes initialization phase would take even more time than the actual computation phase. After some investigation we came with an idea of reading only specific data from our input files. Since those can be as big as 45Mb reading everything on all processors takes too much time. Achieved performance can be seen on figure \ref{fig:13} as compared to the original one. It affected the fastest input data processing strategy \textit{allread} thus potentially decreasing runtime of the whole application.
 \begin{figure}[h!]
 	\begin{center}
@@ -285,7 +283,7 @@ One of the early things we noticed using Cube is that sometimes initialization p
 	\end{center}
 \end{figure}
 
-\subsubsection{MPI data type optimization}
+\subsection{MPI data type optimization}
 Analysing Vampir timeline tracer we noticed that two very close MPI calls which don't have much computation in between were actually separated by a big block of computation. Analysing that block we noticed that much of its time was spent on allocating memory for \textit{MPI\_Type\_indexed} block length arrays and filling in the correct values. Since those operations take too much space and our block length actually never changes, we switched to using \textit{MPI\_Type\_create\_indexed\_block} which gave us a minor improvement. Vampire visualisation for the computation phase can be found in the figure \ref{fig:8}.
 \begin{figure}
 	\centering
@@ -307,7 +305,7 @@ Analysing Vampir timeline tracer we noticed that two very close MPI calls which 
 	\caption{Computation phase trace timeline}\label{fig:8}
 \end{figure}
 
-\subsubsection{Memory leaks}
+\subsection{Memory leaks}
 While using TotalView we noticed a lot of memory leaks in our code and also to a lesser extent in the provided benchmark. All of those were fixed and merged into the final version of the code.
 
 %----------------------------------------------------------------------------------------

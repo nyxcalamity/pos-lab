@@ -18,7 +18,6 @@ pstat*.dat
 *.log
 *.out
 *.gz
-**/report/*.pdf
 
 #system
 *.swp

@@ -4,3 +4,4 @@
 	bare = true
 [remote "origin"]
 	url = git@bitbucket.org:nyxcalamity/pos-lab.git
+	pushurl = https://github.com/nyxcalamity/pos-lab.git

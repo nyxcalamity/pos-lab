@@ -1,0 +1,14 @@
+### Programming of Supercomputers Lab Project
+---
+#### Description
+CFD project aimed to be optimized and parallelized on a supercomputer. Following are the most valuable resources to asses the project:
+- **A2.4/code/final** - final version of the code
+- **A2.4/report/team03-Sobchyshak-Korzh.pdf** - the final report on the project (there's  a corresponding tex file if you want to recompile it)
+
+### Disclaimer
+Most of project structure and some code structures were imposed on us by the course leader. 
+
+### Team
+This project was performed by two people:
+- Denys Sobchyshak
+- Denys Korzh

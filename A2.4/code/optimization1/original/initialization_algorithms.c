@@ -1,8 +1,3 @@
-/**
- * Contains generalized algorithms for various benchmark initialization operations.
- * 
- * @author Denys Korzh, Denys Sobchyshak
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

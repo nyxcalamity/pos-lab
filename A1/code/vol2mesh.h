@@ -1,10 +1,3 @@
-/*
- * vol2mesh.h
- *
- * Author: Anca Berariu 
- * Date: 16.10.2009
- *  
- */
 #ifndef VOL2MESH_H_
 #define VOL2MESH_H_
 

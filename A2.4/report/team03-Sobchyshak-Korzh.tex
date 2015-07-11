@@ -1,7 +1,5 @@
 \documentclass{article}
 
-\usepackage[version=3]{mhchem} % Package for chemical equation typesetting
-\usepackage{siunitx} % Provides the \SI{}{} and \si{} command for typesetting SI units
 \usepackage{graphicx} % Required for the inclusion of images
 \usepackage{natbib} % Required to change bibliography style to APA
 \usepackage{amsmath} % Required for some math elements 
@@ -20,9 +18,9 @@
 %----------------------------------------------------------------------------------------
 %	DOCUMENT INFORMATION
 %----------------------------------------------------------------------------------------
-\title{Programming of Supercomputers \\ Final Report} % Title
-\author{Denys \textsc{Sobchyshak} and Denys \textsc{Korzh}} % Author name
-\date{\today} % Date for the report
+\title{Programming of Supercomputers \\ Final Report}
+\author{Denys \textsc{Sobchyshak} and Denys \textsc{Korzh}}
+\date{January 26, 2015}
 
 \begin{document}
 \maketitle
@@ -94,7 +92,7 @@ With regard to execution time we observed that runtime of the computation phase 
 \end{figure}
 
 \subsubsection{Cache miss rates}
-Using -03 flag increased the cache miss rates for both L2 and L3 caches by a rough 22\%. Such effects of vectorisation on cache miss rates can be seen on figure \ref{fig:2}.
+Usage of -O3 flag increased the cache miss rates for both L2 and L3 caches by a rough 22\%. Such effects of vectorisation on cache miss rates can be seen on figure \ref{fig:2}.
 \begin{figure}[h!]
 	\begin{center}
 		\includegraphics[width=0.8\textwidth]{cache-misses}
@@ -219,7 +217,7 @@ The fact that cells might have common ghost neighbours was also taken into accou
 As a side note, all of the global-to-local mappings were achieved using various mapping arrays, like \textit{nghb\_to\_rank}, \textit{g2l}, \textit{l2g}, etc.
 
 \subsubsection{Non-Blocking communications}
-In such a communication matrix where we don't have constant control over the number of processes (since the code could be run with 8, 256 or more processes) and order of data exchange dead locks may become a threat. To avoid this issue and to increase performance of our code we used non-blocking MPI operations where possible.
+In such a communication matrix where we don't have constant control over the number of processes (since the code could be run with 8, 256 or more processes) and order of data exchange - dead locks may become a threat. To avoid this issue and to increase performance of our code we used non-blocking MPI operations where possible.
 
 \subsection{Main loop parallelization}
 As a final prallelisation step, we needed to adjust computation phase to utilize MPI calls. As \textit{direc} vectors store the current solution state in the main loop, computing the cell value of the \textit{direc2} vector requires access to \textit{direc1} values of the cell’s neighbours, which might be outside of the local domain. For that purpose we need to use MPI non-blocking exchange functions and our previously filled send and receive lists. Now we know how many elements are to be received and from which processes.
@@ -247,7 +245,7 @@ The final step of the benchmark parallelisation and optimization focused on code
 Before we dig into the optimizations and performance analysis it is useful to describe our time measurement approach and some of the tools we have created for metric collection. 
 
 \subparagraph{Timing}
-Since we needed to optimize only specific parts of the application and not the total runtime, we explicitly blocked all MPI operations between application phases (initialization, computation, finalization) using \textit{MPI\_Barrier}. This made time measurement using \textit{MPI\_Wtime} extremely easy, since didn't have to worry if all codes arrived to the Wtime call at approximately same time or if some of the processes were still stuck in the previous phase. We used \textit{MPI\_Reduce} to collect global minimum and maximum times for the specified phase and so obtained the actual time measurement of each application phase.
+Since we needed to optimize only specific parts of the application and not the total runtime, we explicitly blocked all MPI operations between application phases (initialization, computation, finalization) using \textit{MPI\_Barrier}. This made time measurement using \textit{MPI\_Wtime} extremely easy since we didn't have to worry if all processes arrived to the Wtime call at approximately same time or if some of the processes were still stuck in the previous phase. We used \textit{MPI\_Reduce} to collect global minimum and maximum times for the specified phase and so obtained the actual time measurement of each application phase.
 
 \subparagraph{Bash framework}
 Furthermore, since we had to perform numerous measurements with different number of processors and various codes (optimized and non-optimized versions), we decided to create a small bash framework: our script would receive number of processors and an optimization identifier (e.g. \textit{optimization2}) after which it would automatically generate proper job files (with correct number of nodes and etc.), submit them, wait for the jobs to complete and then combine all the outputs into one file and errors into another. In such a way the whole process of job submission and data collections was significantly simplified.
@@ -274,7 +272,7 @@ Tool used for investigation of trace information, which is useful for in-depth M
 Is a set of tools which provide unprecedented control over processes and thread execution, along with deep visibility into program states and data, which was of great use for per processor debugging. However, on SuperMUC we could use it only with intel compiler.
 
 \subsection{File reading optimization}
-One of the early things we noticed using Cube is that sometimes initialization phase would take even more time than the actual computation phase. After some investigation we came with an idea of reading only specific data from our input files. Since those can be as big as 45Mb reading everything on all processors takes too much time. Achieved performance can be seen on figure \ref{fig:13} as compared to the original one. It affected the fastest input data processing strategy \textit{allread} thus potentially decreasing runtime of the whole application.
+One of the early things we noticed using Cube is that sometimes initialization phase would take even more time than the actual computation phase. After some investigation we came with an idea of reading only specific data from our input files, since those can be as big as 45Mb reading everything on all processors takes too much time. Achieved performance can be seen on figure \ref{fig:13} as compared to the original one. It affected the fastest input data processing strategy \textit{allread} thus potentially decreasing runtime of the whole application.
 \begin{figure}[h!]
 	\begin{center}
 		\includegraphics[width=0.8\textwidth]{cojack_inputalgorithm_scalability.png}

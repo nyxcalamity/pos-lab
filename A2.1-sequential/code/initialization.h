@@ -1,10 +1,3 @@
-/**
- * Initialization step - parse the input file, compute data distribution, initialize LOCAL computational arrays
- *
- * @date 22-Oct-2012
- * @author V. Petkov
- */
-
 #ifndef INITIALIZATION_H_
 #define INITIALIZATION_H_
 

@@ -1,10 +1,3 @@
-/*
- * compute_solution.h
- *
- *  Created on: Oct 21, 2012
- *      Author: petkovve
- */
-
 #ifndef COMPUTE_SOLUTION_H_
 #define COMPUTE_SOLUTION_H_
 

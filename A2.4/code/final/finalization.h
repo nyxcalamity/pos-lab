@@ -1,9 +1,3 @@
-/**
- * Finalization step - write results and other computational vectors to files
- *
- * @author V. Petkov
- */
-
 #ifndef FINALIZATION_H_
 #define FINALIZATION_H_
 

@@ -1,10 +1,3 @@
-/**
- * Computational loop
- *
- * @file compute_solution.c
- * @date 22-Oct-2012
- * @author V. Petkov
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>

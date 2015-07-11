@@ -1,11 +1,3 @@
-/*
- * vol2mesh.c
- *
- * Author: A. Berariu 
- * Date: Oct 08, 2009
- * Update: Oct 22, 2014 
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "vol2mesh.h"

@@ -1,9 +1,3 @@
-/**
- * Main GCCG program
- *
- * @author E. Xue, V. Petkov, A. Berariu
- * @date 22-May-2009, 22-Oct-2012, 13-Nov-2014
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
         printf("Error opening file %s to read\n", file_in_name);
         return -1;
     }
-	FILE *fp_out=fopen(file_out_name, "wb");
+    FILE *fp_out=fopen(file_out_name, "wb");
     if (fp_out == NULL) {
         printf("Error opening file %s to write\n", file_in_name);
         fclose(fp_in);

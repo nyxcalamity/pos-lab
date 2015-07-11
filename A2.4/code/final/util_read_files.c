@@ -1,9 +1,3 @@
-/**
- * Helper functions for reading from input data file
- *
- * @author E. Xue, V. Petkov
- * @date 22-May-2009, 22-Oct-2012
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include "util_read_files.h"

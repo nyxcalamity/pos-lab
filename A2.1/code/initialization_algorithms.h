@@ -1,10 +1,3 @@
-/*
- * initialization_algorithms.h
- *
- *  Created on: Nov 10, 2014
- *      Author: power-morzh
- */
-
 #ifndef INITIALIZATION_ALGORITHMS_H_
 #define INITIALIZATION_ALGORITHMS_H_
 

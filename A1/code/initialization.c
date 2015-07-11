@@ -1,9 +1,3 @@
-/**
- * Initialization step - parse the input file, compute data distribution, initialize LOCAL computational arrays
- *
- * @date 22-Oct-2012
- * @author V. Petkov
- */
 //student_code_delimiter------------------------------------------------------------------------------------------------
 #include <stdio.h>
 #include "util_read_files_bin.h"

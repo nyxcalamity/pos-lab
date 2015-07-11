@@ -1,9 +1,3 @@
-/**
- * Finalization step - write results and other computational vectors to files
- *
- * @author V. Petkov, Denys Sobchyshak, Denys Korzh
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <mpi.h>

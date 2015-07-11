@@ -1,10 +1,3 @@
-/**
- * Functions to test the data distribution and communication lists creation algorithms
- *
- * @date 22-Oct-2012, 03-Nov-2014
- * @author V. Petkov, A. Berariu
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 

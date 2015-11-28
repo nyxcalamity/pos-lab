@@ -10,7 +10,7 @@ CFD project aimed to be optimized and parallelized on a supercomputer. Following
 Most of project structure and some code structures were imposed on us by the course leader. 
 
 ### Team
-This project was performed by two people:
+This project was carried out by two people:
 
 - Denys Sobchyshak
 - Denys Korzh
